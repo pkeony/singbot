@@ -2953,7 +2953,7 @@ var MineData = {
     questsPerDay: 3,
     completionBonusGold: 800,
     completionBonusStarFragments: 1,
-    tierMultiplier: [0.5, 0.5, 1.0, 1.0, 1.5, 1.5, 2.0, 2.0],
+    tierMultiplier: [0.5, 0.5, 1.0, 1.0, 1.5, 1.5, 2.0, 2.0], // 곡괭이 티어별 보상 배율
     types: [
       { id: "mine_count",      desc: "채굴 {n}회 하기",           paramRange: [3, 8],     rewardGold: [150, 300] },
       { id: "collect_resource", desc: "{resource} {n}개 수집하기", paramRange: [5, 15],    rewardGold: [200, 400] },
@@ -2991,7 +2991,7 @@ var MineData = {
     IDLE_RATE_BASE: 0.5,             // 분당 기본 자원
     UPGRADE_BASE_COST: 100,
     UPGRADE_COST_MULTIPLIER: 1.35,
-    UPGRADE_SUCCESS_RATE: [1.0, 1.0, 0.8, 0.8, 0.6, 0.6, 0.4, 0.4],
+    UPGRADE_SUCCESS_RATE: [1.0, 1.0, 0.8, 0.8, 0.6, 0.6, 0.4, 0.4], // 곡괭이 티어별 강화 성공률
     DEPTH_GAIN_MIN: 1,
     DEPTH_GAIN_MAX: 3,
     STARTING_GOLD: 100
@@ -3416,36 +3416,52 @@ function ensureNewFields(account) {
 
 function rollMiningEvent(account, area) {
   if (Math.random() >= MineData.miningEvents.chance) return null;
+
   var types = MineData.miningEvents.types;
   var totalWeight = 0;
   for (var i = 0; i < types.length; i++) totalWeight += types[i].weight;
   var roll = Math.random() * totalWeight;
   var picked = types[0];
-  for (var i = 0; i < types.length; i++) { roll -= types[i].weight; if (roll <= 0) { picked = types[i]; break; } }
+  for (var i = 0; i < types.length; i++) {
+    roll -= types[i].weight;
+    if (roll <= 0) { picked = types[i]; break; }
+  }
+
   var result = { type: picked.id, name: picked.name, emoji: picked.emoji, details: {} };
+
   if (picked.id === "treasure_chest") {
-    result.details.bonusGold = picked.goldRange[0] + Math.floor(Math.random() * (picked.goldRange[1] - picked.goldRange[0] + 1));
+    var bonusGold = picked.goldRange[0] + Math.floor(Math.random() * (picked.goldRange[1] - picked.goldRange[0] + 1));
+    result.details.bonusGold = bonusGold;
   } else if (picked.id === "trap") {
     var pct = picked.goldLossPercent[0] + Math.random() * (picked.goldLossPercent[1] - picked.goldLossPercent[0]);
-    result.details.goldLoss = Math.min(Math.floor(account.gold * pct), picked.maxLoss);
-    if (result.details.goldLoss < 1) result.details.goldLoss = 0;
+    var loss = Math.min(Math.floor(account.gold * pct), picked.maxLoss);
+    if (loss < 1) loss = 0;
+    result.details.goldLoss = loss;
   } else if (picked.id === "merchant") {
-    var offer = MineData.shopItems[Math.floor(Math.random() * 2)];
+    var shopItems = MineData.shopItems;
+    var offer = shopItems[Math.floor(Math.random() * 2)];
     var discountPrice = Math.floor(offer.price * 0.5);
     result.details.offer = { name: offer.name, originalPrice: offer.price, price: discountPrice, effect: offer.effect, value: offer.value };
     account.pendingMerchant = { offer: result.details.offer, expireTime: Date.now() + 300000 };
   } else if (picked.id === "rich_vein") {
     result.details.multiplier = 2;
   } else if (picked.id === "mysterious_ore") {
-    var higherArea = MineData.areas[Math.min(account.currentArea + 1, MineData.areas.length - 1)];
-    var pick = higherArea.drops[Math.floor(Math.random() * higherArea.drops.length)];
+    var areaIndex = account.currentArea;
+    var higherArea = MineData.areas[Math.min(areaIndex + 1, MineData.areas.length - 1)];
+    var dropPool = higherArea.drops;
+    var pick = dropPool[Math.floor(Math.random() * dropPool.length)];
     var res = MineData.resources[pick.id];
-    result.details = { resourceId: pick.id, resourceName: res.name, resourceEmoji: res.emoji, count: 1 + Math.floor(Math.random() * 2) };
+    result.details.resourceId = pick.id;
+    result.details.resourceName = res.name;
+    result.details.resourceEmoji = res.emoji;
+    result.details.count = 1 + Math.floor(Math.random() * 2);
   }
+
   ensureNewFields(account);
   account.eventStats.total++;
   if (!account.eventStats.byType[picked.id]) account.eventStats.byType[picked.id] = 0;
   account.eventStats.byType[picked.id]++;
+
   return result;
 }
 
@@ -3453,23 +3469,45 @@ function handleMerchantBuy(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
   ensureNewFields(account);
+
   if (!account.pendingMerchant || Date.now() > account.pendingMerchant.expireTime) {
-    account.pendingMerchant = null; saveMineAccount(sender, account);
-    replier.reply("[ 싱봇 광산 ] 떠돌이 상인이 없거나 시간이 만료되었습니다."); return;
+    account.pendingMerchant = null;
+    saveMineAccount(sender, account);
+    replier.reply("[ 싱봇 광산 ] 떠돌이 상인이 없거나 시간이 만료되었습니다.");
+    return;
   }
+
   var offer = account.pendingMerchant.offer;
-  if (account.gold < offer.price) { replier.reply("[ 싱봇 광산 ] 골드 부족! (필요: " + offer.price + "G, 보유: " + account.gold + "G)"); return; }
+  if (account.gold < offer.price) {
+    replier.reply("[ 싱봇 광산 ] 골드 부족! (필요: " + offer.price + "G, 보유: " + account.gold + "G)");
+    return;
+  }
+
   account.gold -= offer.price;
   var effectMsg = "";
-  if (offer.effect === "stamina") { account.stamina = Math.min(account.maxStamina, account.stamina + offer.value); effectMsg = "체력 +" + offer.value; }
-  else if (offer.effect === "luck") { if (!account.buffs.luck) account.buffs.luck = { uses: 0 }; account.buffs.luck.uses += offer.value; effectMsg = "행운 부적 " + offer.value + "회분"; }
-  account.pendingMerchant = null; saveMineAccount(sender, account);
+  if (offer.effect === "stamina") {
+    account.stamina = Math.min(account.maxStamina, account.stamina + offer.value);
+    effectMsg = "체력 +" + offer.value;
+  } else if (offer.effect === "luck") {
+    if (!account.buffs.luck) account.buffs.luck = { uses: 0 };
+    account.buffs.luck.uses += offer.value;
+    effectMsg = "행운 부적 " + offer.value + "회분";
+  }
+
+  account.pendingMerchant = null;
+  saveMineAccount(sender, account);
   replier.reply("[ 싱봇 광산 ] 🧙 상인에게 구매 완료!\n\n" + offer.name + " (" + offer.price + "G)\n" + effectMsg + "\n💰 잔여: " + account.gold + "G");
 }
 
 // ===== Feature 4: 칭호 시스템 =====
 
-function getCodexCount(account) { var c = 0; for (var k in account.codex) { if (account.codex.hasOwnProperty(k) && account.codex[k]) c++; } return c; }
+function getCodexCount(account) {
+  var count = 0;
+  for (var k in account.codex) {
+    if (account.codex.hasOwnProperty(k) && account.codex[k]) count++;
+  }
+  return count;
+}
 
 function checkTitleUnlocks(account) {
   ensureNewFields(account);
@@ -3477,27 +3515,62 @@ function checkTitleUnlocks(account) {
   for (var i = 0; i < MineData.titles.length; i++) {
     var title = MineData.titles[i];
     if (account.titles.unlocked.indexOf(title.id) >= 0) continue;
-    var cond = title.condition; var val = 0;
+
+    var cond = title.condition;
+    var val = 0;
     if (cond.type === "codexCount") val = getCodexCount(account);
     else if (cond.type === "gamblingTotal") val = account.gamblingStats ? account.gamblingStats.totalBet : 0;
     else if (cond.type === "questsCompleted") val = account.questsCompleted || 0;
     else val = account[cond.type] || 0;
-    if (val >= cond.value) { account.titles.unlocked.push(title.id); newTitles.push(title); }
+
+    if (val >= cond.value) {
+      account.titles.unlocked.push(title.id);
+      newTitles.push(title);
+    }
   }
   return newTitles;
 }
 
-function getTitleById(id) { for (var i = 0; i < MineData.titles.length; i++) { if (MineData.titles[i].id === id) return MineData.titles[i]; } return null; }
-function getEquippedTitleDisplay(account) { ensureNewFields(account); if (!account.titles.equipped) return ""; var t = getTitleById(account.titles.equipped); return t ? t.emoji + " " + t.name : ""; }
-function titleUnlockText(newTitles) { if (newTitles.length === 0) return ""; var t = "\n🏅 새 칭호 획득!\n"; for (var i = 0; i < newTitles.length; i++) t += "  " + newTitles[i].emoji + " " + newTitles[i].name + "\n"; return t; }
+function getTitleById(id) {
+  for (var i = 0; i < MineData.titles.length; i++) {
+    if (MineData.titles[i].id === id) return MineData.titles[i];
+  }
+  return null;
+}
+
+function getEquippedTitleDisplay(account) {
+  ensureNewFields(account);
+  if (!account.titles.equipped) return "";
+  var t = getTitleById(account.titles.equipped);
+  if (!t) return "";
+  return t.emoji + " " + t.name;
+}
+
+function titleUnlockText(newTitles) {
+  if (newTitles.length === 0) return "";
+  var text = "\n🏅 새 칭호 획득!\n";
+  for (var i = 0; i < newTitles.length; i++) {
+    text += "  " + newTitles[i].emoji + " " + newTitles[i].name + "\n";
+  }
+  return text;
+}
 
 function handleTitleList(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
-  ensureNewFields(account); checkTitleUnlocks(account); saveMineAccount(sender, account);
+  ensureNewFields(account);
+  checkTitleUnlocks(account);
+  saveMineAccount(sender, account);
+
   var text = "[ 싱봇 광산 ] 🏅 칭호 목록\n━━━━━━━━━━━━━━━━━━\n";
-  text += "🏷️ 장착중: " + (getEquippedTitleDisplay(account) || "없음") + "\n\n";
-  for (var i = 0; i < MineData.titles.length; i++) { var t = MineData.titles[i]; text += (account.titles.unlocked.indexOf(t.id) >= 0 ? "✅ " : "🔒 ") + t.emoji + " " + t.name + " — " + t.desc + "\n"; }
+  var equipped = getEquippedTitleDisplay(account);
+  text += "🏷️ 장착중: " + (equipped || "없음") + "\n\n";
+
+  for (var i = 0; i < MineData.titles.length; i++) {
+    var t = MineData.titles[i];
+    var unlocked = account.titles.unlocked.indexOf(t.id) >= 0;
+    text += (unlocked ? "✅ " : "🔒 ") + t.emoji + " " + t.name + " — " + t.desc + "\n";
+  }
   text += "\n'ㄱㅅ칭호장착 [칭호명]'으로 장착";
   replier.reply(text);
 }
@@ -3506,14 +3579,27 @@ function handleTitleEquip(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
   ensureNewFields(account);
+
   var input = msg.replace(/^(광산|ㄱㅅ|ㄳ)칭호장착\s*/, "").trim();
-  if (!input) { replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ칭호장착 [칭호명]\n해제: ㄱㅅ칭호장착 해제"); return; }
-  if (input === "해제") { account.titles.equipped = null; saveMineAccount(sender, account); replier.reply("[ 싱봇 광산 ] 칭호를 해제했습니다."); return; }
+  if (!input) {
+    replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ칭호장착 [칭호명]\n해제: ㄱㅅ칭호장착 해제");
+    return;
+  }
+  if (input === "해제") {
+    account.titles.equipped = null;
+    saveMineAccount(sender, account);
+    replier.reply("[ 싱봇 광산 ] 칭호를 해제했습니다.");
+    return;
+  }
   var found = null;
-  for (var i = 0; i < MineData.titles.length; i++) { if (MineData.titles[i].name === input) { found = MineData.titles[i]; break; } }
+  for (var i = 0; i < MineData.titles.length; i++) {
+    if (MineData.titles[i].name === input) { found = MineData.titles[i]; break; }
+  }
   if (!found) { replier.reply("[ 싱봇 광산 ] 존재하지 않는 칭호입니다. 'ㄱㅅ칭호'로 확인하세요."); return; }
   if (account.titles.unlocked.indexOf(found.id) < 0) { replier.reply("[ 싱봇 광산 ] 미해금 칭호입니다.\n조건: " + found.desc); return; }
-  account.titles.equipped = found.id; saveMineAccount(sender, account);
+
+  account.titles.equipped = found.id;
+  saveMineAccount(sender, account);
   replier.reply("[ 싱봇 광산 ] 🏷️ 칭호 장착!\n" + found.emoji + " " + found.name);
 }
 
@@ -3523,79 +3609,182 @@ function handleGamble(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
   ensureNewFields(account);
+
   var args = msg.replace(/^(광산|ㄱㅅ|ㄳ)도박\s*/, "").trim().split(/\s+/);
-  var amount = parseInt(args[0]); var choice = args[1] || null;
+  var amount = parseInt(args[0]);
+  var choice = args[1] || null;
+
   if (!amount || isNaN(amount) || amount < MineData.gambling.minBet) {
-    replier.reply("[ 싱봇 광산 ] 🎰 도박장\n━━━━━━━━━━━━━━━━━━\n🎲 홀짝: ㄱㅅ도박 [금액] [홀/짝]\n  → 승리 시 1.95배\n\n🎰 룰렛: ㄱㅅ도박 [금액]\n  → x0 ~ x5 배율\n\n최소 " + MineData.gambling.minBet + "G / 최대 " + MineData.gambling.maxBet + "G"); return;
+    replier.reply(
+      "[ 싱봇 광산 ] 🎰 도박장\n━━━━━━━━━━━━━━━━━━\n" +
+      "🎲 홀짝: ㄱㅅ도박 [금액] [홀/짝]\n" +
+      "  → 승리 시 1.95배\n\n" +
+      "🎰 룰렛: ㄱㅅ도박 [금액]\n" +
+      "  → x0 ~ x5 배율\n\n" +
+      "최소 " + MineData.gambling.minBet + "G / 최대 " + MineData.gambling.maxBet + "G"
+    );
+    return;
   }
+
   if (amount > MineData.gambling.maxBet) amount = MineData.gambling.maxBet;
-  if (account.gold < amount) { replier.reply("[ 싱봇 광산 ] 골드 부족! (필요: " + amount + "G, 보유: " + account.gold + "G)"); return; }
+  if (account.gold < amount) {
+    replier.reply("[ 싱봇 광산 ] 골드 부족! (필요: " + amount + "G, 보유: " + account.gold + "G)");
+    return;
+  }
+
   var now = Date.now();
-  if (now - account.gamblingStats.lastGambleTime < MineData.gambling.cooldownMs) { replier.reply("[ 싱봇 광산 ] " + Math.ceil((MineData.gambling.cooldownMs - (now - account.gamblingStats.lastGambleTime)) / 1000) + "초 후에 다시 도박할 수 있습니다."); return; }
-  account.gold -= amount; account.gamblingStats.totalBet += amount; account.gamblingStats.lastGambleTime = now;
+  if (now - account.gamblingStats.lastGambleTime < MineData.gambling.cooldownMs) {
+    var wait = Math.ceil((MineData.gambling.cooldownMs - (now - account.gamblingStats.lastGambleTime)) / 1000);
+    replier.reply("[ 싱봇 광산 ] " + wait + "초 후에 다시 도박할 수 있습니다.");
+    return;
+  }
+
+  account.gold -= amount;
+  account.gamblingStats.totalBet += amount;
+  account.gamblingStats.lastGambleTime = now;
   var text = "";
+
   if (choice === "홀" || choice === "짝") {
-    var dice = 1 + Math.floor(Math.random() * 6); var isOdd = dice % 2 === 1;
+    var dice = 1 + Math.floor(Math.random() * 6);
+    var isOdd = dice % 2 === 1;
+    var diceResult = isOdd ? "홀" : "짝";
     var won = (choice === "홀" && isOdd) || (choice === "짝" && !isOdd);
     var payout = won ? Math.floor(amount * 1.95) : 0;
-    text = "[ 싱봇 광산 ] 🎲 홀짝\n━━━━━━━━━━━━━━━━━━\n배팅: " + amount + "G | 선택: " + choice + "\n🎲 주사위: [" + dice + "] → " + (isOdd ? "홀" : "짝") + "!\n\n";
-    if (won) { account.gold += payout; account.gamblingStats.totalWon += payout; text += "🎉 승리! +" + payout + "G (1.95배)\n"; }
-    else { account.gamblingStats.totalLost += amount; text += "😢 패배! -" + amount + "G\n"; }
+
+    text = "[ 싱봇 광산 ] 🎲 홀짝\n━━━━━━━━━━━━━━━━━━\n";
+    text += "배팅: " + amount + "G | 선택: " + choice + "\n";
+    text += "🎲 주사위: [" + dice + "] → " + diceResult + "!\n\n";
+
+    if (won) {
+      account.gold += payout;
+      account.gamblingStats.totalWon += payout;
+      text += "🎉 승리! +" + payout + "G (1.95배)\n";
+    } else {
+      account.gamblingStats.totalLost += amount;
+      text += "😢 패배! -" + amount + "G\n";
+    }
   } else {
-    var slots = MineData.gambling.roulette; var tw = 0;
+    var slots = MineData.gambling.roulette;
+    var tw = 0;
     for (var i = 0; i < slots.length; i++) tw += slots[i].weight;
-    var r = Math.random() * tw; var slot = slots[0];
-    for (var i = 0; i < slots.length; i++) { r -= slots[i].weight; if (r <= 0) { slot = slots[i]; break; } }
+    var r = Math.random() * tw;
+    var slot = slots[0];
+    for (var i = 0; i < slots.length; i++) {
+      r -= slots[i].weight;
+      if (r <= 0) { slot = slots[i]; break; }
+    }
     var payout = Math.floor(amount * slot.multiplier);
-    text = "[ 싱봇 광산 ] 🎰 배율 룰렛\n━━━━━━━━━━━━━━━━━━\n배팅: " + amount + "G\n🎰 결과: " + slot.label + " (x" + slot.multiplier + ")\n\n";
-    if (payout > 0) { account.gold += payout; if (payout > amount) { account.gamblingStats.totalWon += payout; text += "🎉 +" + payout + "G!\n"; } else { account.gamblingStats.totalLost += (amount - payout); text += "😐 " + payout + "G 회수 (-" + (amount - payout) + "G)\n"; } }
-    else { account.gamblingStats.totalLost += amount; text += "💀 전액 잃었습니다! -" + amount + "G\n"; }
+
+    text = "[ 싱봇 광산 ] 🎰 배율 룰렛\n━━━━━━━━━━━━━━━━━━\n";
+    text += "배팅: " + amount + "G\n";
+    text += "🎰 결과: " + slot.label + " (x" + slot.multiplier + ")\n\n";
+
+    if (payout > 0) {
+      account.gold += payout;
+      if (payout > amount) {
+        account.gamblingStats.totalWon += payout;
+        text += "🎉 +" + payout + "G!\n";
+      } else {
+        account.gamblingStats.totalLost += (amount - payout);
+        text += "😐 " + payout + "G 회수 (-" + (amount - payout) + "G)\n";
+      }
+    } else {
+      account.gamblingStats.totalLost += amount;
+      text += "💀 전액 잃었습니다! -" + amount + "G\n";
+    }
   }
+
   text += "💰 보유: " + account.gold + "G";
-  var newTitles = checkTitleUnlocks(account); text += titleUnlockText(newTitles);
-  saveMineAccount(sender, account); replier.reply(text);
+  var newTitles = checkTitleUnlocks(account);
+  text += titleUnlockText(newTitles);
+  saveMineAccount(sender, account);
+  replier.reply(text);
 }
 
 function handleGambleStats(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
-  ensureNewFields(account); var s = account.gamblingStats; var net = s.totalWon - s.totalLost;
-  replier.reply("[ 싱봇 광산 ] 🎰 도박 기록\n━━━━━━━━━━━━━━━━━━\n총 배팅: " + s.totalBet + "G\n총 수익: " + s.totalWon + "G\n총 손실: " + s.totalLost + "G\n순이익: " + (net >= 0 ? "+" : "") + net + "G");
+  ensureNewFields(account);
+  var s = account.gamblingStats;
+  var net = s.totalWon - s.totalLost;
+  replier.reply(
+    "[ 싱봇 광산 ] 🎰 도박 기록\n━━━━━━━━━━━━━━━━━━\n" +
+    "총 배팅: " + s.totalBet + "G\n" +
+    "총 수익: " + s.totalWon + "G\n" +
+    "총 손실: " + s.totalLost + "G\n" +
+    "순이익: " + (net >= 0 ? "+" : "") + net + "G"
+  );
 }
 
 // ===== Feature 2: 일일퀘스트 =====
 
-function seededRandom(seed) { return (seed * 1103515245 + 12345) & 0x7fffffff; }
+function seededRandom(seed) {
+  seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+  return seed;
+}
 
 function generateDailyQuests(account) {
-  ensureNewFields(account); var today = todaySeed();
+  ensureNewFields(account);
+  var today = todaySeed();
   if (account.dailyQuests.date === today) return;
+
   var seed = today + hashCode(account.sender || account.name);
-  var types = MineData.dailyQuests.types; var questCount = MineData.dailyQuests.questsPerDay;
-  var indices = []; for (var i = 0; i < types.length; i++) indices.push(i);
-  for (var i = indices.length - 1; i > 0; i--) { seed = seededRandom(seed); var j = (seed >>> 0) % (i + 1); var tmp = indices[i]; indices[i] = indices[j]; indices[j] = tmp; }
+  var types = MineData.dailyQuests.types;
+  var questCount = MineData.dailyQuests.questsPerDay;
+
+  var indices = [];
+  for (var i = 0; i < types.length; i++) indices.push(i);
+  for (var i = indices.length - 1; i > 0; i--) {
+    seed = seededRandom(seed);
+    var j = (seed >>> 0) % (i + 1);
+    var tmp = indices[i]; indices[i] = indices[j]; indices[j] = tmp;
+  }
+
   var quests = [];
   for (var q = 0; q < questCount && q < indices.length; q++) {
     var type = types[indices[q]];
-    seed = seededRandom(seed); var paramVal = type.paramRange[0] + ((seed >>> 0) % (type.paramRange[1] - type.paramRange[0] + 1));
-    seed = seededRandom(seed); var baseReward = type.rewardGold[0] + ((seed >>> 0) % (type.rewardGold[1] - type.rewardGold[0] + 1));
-    var tierIdx = getPickaxeInfo(account.pickaxeLevel).tierIndex; var tierMult = MineData.dailyQuests.tierMultiplier[tierIdx] || 1;
+    seed = seededRandom(seed);
+    var paramVal = type.paramRange[0] + ((seed >>> 0) % (type.paramRange[1] - type.paramRange[0] + 1));
+    seed = seededRandom(seed);
+    var baseReward = type.rewardGold[0] + ((seed >>> 0) % (type.rewardGold[1] - type.rewardGold[0] + 1));
+    var tierIdx = getPickaxeInfo(account.pickaxeLevel).tierIndex;
+    var tierMult = MineData.dailyQuests.tierMultiplier[tierIdx] || 1;
     var rewardGold = Math.floor(baseReward * tierMult);
-    var desc = type.desc.replace("{n}", paramVal); var resourceName = null;
-    if (type.id === "collect_resource") { var area = MineData.areas[account.currentArea]; seed = seededRandom(seed); var res = MineData.resources[area.drops[(seed >>> 0) % area.drops.length].id]; resourceName = res.name; desc = desc.replace("{resource}", resourceName); }
-    quests.push({ typeId: type.id, desc: desc, target: paramVal, progress: 0, resourceName: resourceName, rewardGold: rewardGold, completed: false, claimed: false });
+
+    var desc = type.desc.replace("{n}", paramVal);
+    var resourceName = null;
+    if (type.id === "collect_resource") {
+      var area = MineData.areas[account.currentArea];
+      seed = seededRandom(seed);
+      var dropIdx = (seed >>> 0) % area.drops.length;
+      var res = MineData.resources[area.drops[dropIdx].id];
+      resourceName = res.name;
+      desc = desc.replace("{resource}", resourceName);
+    }
+
+    quests.push({
+      typeId: type.id, desc: desc, target: paramVal, progress: 0,
+      resourceName: resourceName, rewardGold: rewardGold, completed: false, claimed: false
+    });
   }
+
   account.dailyQuests = { date: today, quests: quests, allClaimed: false };
 }
 
 function checkQuestProgress(account, mineResult) {
-  ensureNewFields(account); generateDailyQuests(account);
+  ensureNewFields(account);
+  generateDailyQuests(account);
   var quests = account.dailyQuests.quests;
+
   for (var i = 0; i < quests.length; i++) {
-    var q = quests[i]; if (q.completed) continue;
+    var q = quests[i];
+    if (q.completed) continue;
     if (q.typeId === "mine_count") q.progress++;
-    else if (q.typeId === "collect_resource" && mineResult.drops) { for (var j = 0; j < mineResult.drops.length; j++) { if (mineResult.drops[j].name === q.resourceName) q.progress += mineResult.drops[j].count; } }
-    else if (q.typeId === "earn_gold") q.progress += mineResult.gold || 0;
+    else if (q.typeId === "collect_resource" && mineResult.drops) {
+      for (var j = 0; j < mineResult.drops.length; j++) {
+        if (mineResult.drops[j].name === q.resourceName) q.progress += mineResult.drops[j].count;
+      }
+    } else if (q.typeId === "earn_gold") q.progress += mineResult.gold || 0;
     else if (q.typeId === "reach_depth") { if (account.depth > q.progress) q.progress = account.depth; }
     if (q.progress >= q.target) q.completed = true;
   }
@@ -3604,17 +3793,29 @@ function checkQuestProgress(account, mineResult) {
 function handleDailyQuest(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
-  ensureNewFields(account); generateDailyQuests(account); saveMineAccount(sender, account);
+  ensureNewFields(account);
+  generateDailyQuests(account);
+  saveMineAccount(sender, account);
+
   var quests = account.dailyQuests.quests;
-  var text = "[ 싱봇 광산 ] 📋 오늘의 퀘스트\n━━━━━━━━━━━━━━━━━━\n\n"; var allClaimed = true;
+  var text = "[ 싱봇 광산 ] 📋 오늘의 퀘스트\n━━━━━━━━━━━━━━━━━━\n\n";
+  var allClaimed = true;
+
   for (var i = 0; i < quests.length; i++) {
-    var q = quests[i]; var prog = Math.min(q.progress, q.target);
-    var bar = ""; var filled = Math.floor(prog / q.target * 10);
+    var q = quests[i];
+    var prog = Math.min(q.progress, q.target);
+    var bar = "";
+    var filled = Math.floor(prog / q.target * 10);
     for (var b = 0; b < 10; b++) bar += b < filled ? "■" : "□";
-    text += (i + 1) + "️⃣ " + q.desc + "\n   [" + bar + "] " + prog + "/" + q.target;
-    if (q.claimed) text += " ✅ 수령완료"; else if (q.completed) { text += " ✅"; allClaimed = false; } else allClaimed = false;
+
+    text += (i + 1) + "️⃣ " + q.desc + "\n";
+    text += "   [" + bar + "] " + prog + "/" + q.target;
+    if (q.claimed) text += " ✅ 수령완료";
+    else if (q.completed) { text += " ✅"; allClaimed = false; }
+    else allClaimed = false;
     text += "\n   보상: 💰 " + q.rewardGold + "G\n\n";
   }
+
   text += "🎁 올클리어: 💰 " + MineData.dailyQuests.completionBonusGold + "G + 🌟 " + MineData.dailyQuests.completionBonusStarFragments + "\n";
   if (!allClaimed) text += "'ㄱㅅ퀘스트보상'으로 보상 수령";
   replier.reply(text);
@@ -3623,16 +3824,45 @@ function handleDailyQuest(room, msg, sender, replier) {
 function handleDailyQuestClaim(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
-  ensureNewFields(account); generateDailyQuests(account);
-  var quests = account.dailyQuests.quests; var claimed = 0;
+  ensureNewFields(account);
+  generateDailyQuests(account);
+
+  var quests = account.dailyQuests.quests;
+  var claimed = 0;
   var text = "[ 싱봇 광산 ] 📋 퀘스트 보상\n━━━━━━━━━━━━━━━━━━\n";
-  for (var i = 0; i < quests.length; i++) { var q = quests[i]; if (q.completed && !q.claimed) { q.claimed = true; account.gold += q.rewardGold; account.totalGoldEarned += q.rewardGold; account.questsCompleted = (account.questsCompleted || 0) + 1; claimed++; text += "✅ " + q.desc + " → +" + q.rewardGold + "G\n"; } }
+
+  for (var i = 0; i < quests.length; i++) {
+    var q = quests[i];
+    if (q.completed && !q.claimed) {
+      q.claimed = true;
+      account.gold += q.rewardGold;
+      account.totalGoldEarned += q.rewardGold;
+      account.questsCompleted = (account.questsCompleted || 0) + 1;
+      claimed++;
+      text += "✅ " + q.desc + " → +" + q.rewardGold + "G\n";
+    }
+  }
+
   if (claimed === 0) { replier.reply("[ 싱봇 광산 ] 수령할 보상이 없습니다!"); return; }
-  var allClaimed = true; for (var i = 0; i < quests.length; i++) { if (!quests[i].claimed) { allClaimed = false; break; } }
-  if (allClaimed && !account.dailyQuests.allClaimed) { account.dailyQuests.allClaimed = true; var tierIdx = getPickaxeInfo(account.pickaxeLevel).tierIndex; var tierMult = MineData.dailyQuests.tierMultiplier[tierIdx] || 1; var bonusGold = Math.floor(MineData.dailyQuests.completionBonusGold * tierMult); account.gold += bonusGold; account.totalGoldEarned += bonusGold; account.starFragments += MineData.dailyQuests.completionBonusStarFragments; text += "\n🎁 올클리어!\n  💰 +" + bonusGold + "G + 🌟 +" + MineData.dailyQuests.completionBonusStarFragments + "\n"; }
+
+  var allClaimed = true;
+  for (var i = 0; i < quests.length; i++) { if (!quests[i].claimed) { allClaimed = false; break; } }
+  if (allClaimed && !account.dailyQuests.allClaimed) {
+    account.dailyQuests.allClaimed = true;
+    var tierIdx = getPickaxeInfo(account.pickaxeLevel).tierIndex;
+    var tierMult = MineData.dailyQuests.tierMultiplier[tierIdx] || 1;
+    var bonusGold = Math.floor(MineData.dailyQuests.completionBonusGold * tierMult);
+    account.gold += bonusGold;
+    account.totalGoldEarned += bonusGold;
+    account.starFragments += MineData.dailyQuests.completionBonusStarFragments;
+    text += "\n🎁 올클리어!\n  💰 +" + bonusGold + "G + 🌟 +" + MineData.dailyQuests.completionBonusStarFragments + "\n";
+  }
+
   text += "\n💰 보유: " + account.gold + "G";
-  var newTitles = checkTitleUnlocks(account); text += titleUnlockText(newTitles);
-  saveMineAccount(sender, account); replier.reply(text);
+  var newTitles = checkTitleUnlocks(account);
+  text += titleUnlockText(newTitles);
+  saveMineAccount(sender, account);
+  replier.reply(text);
 }
 
 // --- 핵심: 채굴 ---
@@ -3706,22 +3936,44 @@ function doMine(account) {
   // 지역 전환 체크
   checkAreaUnlock(account);
 
-  // 채굴 이벤트
+  // 채굴 이벤트 (Feature 3)
   ensureNewFields(account);
   var miningEvent = rollMiningEvent(account, area);
   if (miningEvent) {
-    if (miningEvent.type === "rich_vein") { for (var i = 0; i < drops.length; i++) { addResource(account, drops[i].name, drops[i].count); drops[i].count *= 2; } }
-    else if (miningEvent.type === "trap") { account.gold -= miningEvent.details.goldLoss; if (account.gold < 0) account.gold = 0; }
-    else if (miningEvent.type === "treasure_chest") { account.gold += miningEvent.details.bonusGold; account.totalGoldEarned += miningEvent.details.bonusGold; }
-    else if (miningEvent.type === "mysterious_ore") {
+    if (miningEvent.type === "rich_vein") {
+      for (var i = 0; i < drops.length; i++) {
+        addResource(account, drops[i].name, drops[i].count);
+        drops[i].count *= 2;
+      }
+    } else if (miningEvent.type === "trap") {
+      account.gold -= miningEvent.details.goldLoss;
+      if (account.gold < 0) account.gold = 0;
+    } else if (miningEvent.type === "treasure_chest") {
+      account.gold += miningEvent.details.bonusGold;
+      account.totalGoldEarned += miningEvent.details.bonusGold;
+    } else if (miningEvent.type === "mysterious_ore") {
       addResource(account, miningEvent.details.resourceName, miningEvent.details.count);
       drops.push({ name: miningEvent.details.resourceName, count: miningEvent.details.count, emoji: miningEvent.details.resourceEmoji });
-      if (!account.codex[miningEvent.details.resourceId]) { account.codex[miningEvent.details.resourceId] = true; newDiscoveries.push(miningEvent.details.resourceName); }
+      if (!account.codex[miningEvent.details.resourceId]) {
+        account.codex[miningEvent.details.resourceId] = true;
+        newDiscoveries.push(miningEvent.details.resourceName);
+      }
     }
   }
 
-  var mineResult = { success: true, drops: drops, gold: goldEarned, depthGain: account.depth - oldDepth, newDiscoveries: newDiscoveries, bossResult: bossResult, miningEvent: miningEvent };
+  var mineResult = {
+    success: true,
+    drops: drops,
+    gold: goldEarned,
+    depthGain: account.depth - oldDepth,
+    newDiscoveries: newDiscoveries,
+    bossResult: bossResult,
+    miningEvent: miningEvent
+  };
+
+  // 일일퀘스트 진행 (Feature 2)
   checkQuestProgress(account, mineResult);
+
   return mineResult;
 }
 
@@ -3821,11 +4073,19 @@ function handleMine(room, msg, sender, replier) {
   if (result.miningEvent) {
     var ev = result.miningEvent;
     text += "\n━━━ " + ev.emoji + " " + ev.name + " ━━━\n";
-    if (ev.type === "treasure_chest") text += "보물 발견! 💰 +" + ev.details.bonusGold + "G\n";
-    else if (ev.type === "trap") text += "골드 -" + ev.details.goldLoss + "G! 조심하세요!\n";
-    else if (ev.type === "merchant") text += "\"" + ev.details.offer.name + "을(를) " + ev.details.offer.price + "G에 팔지...\"\n(원가 " + ev.details.offer.originalPrice + "G → 50% 할인!)\n'ㄱㅅ상인구매'로 구매 (5분 제한)\n";
-    else if (ev.type === "rich_vein") text += "모든 드롭이 2배!\n";
-    else if (ev.type === "mysterious_ore") text += ev.details.resourceEmoji + " " + ev.details.resourceName + " x" + ev.details.count + " 획득!\n";
+    if (ev.type === "treasure_chest") {
+      text += "보물 발견! 💰 +" + ev.details.bonusGold + "G\n";
+    } else if (ev.type === "trap") {
+      text += "골드 -" + ev.details.goldLoss + "G! 조심하세요!\n";
+    } else if (ev.type === "merchant") {
+      text += "\"" + ev.details.offer.name + "을(를) " + ev.details.offer.price + "G에 팔지...\"\n";
+      text += "(원가 " + ev.details.offer.originalPrice + "G → 50% 할인!)\n";
+      text += "'ㄱㅅ상인구매'로 구매 (5분 제한)\n";
+    } else if (ev.type === "rich_vein") {
+      text += "모든 드롭이 2배!\n";
+    } else if (ev.type === "mysterious_ore") {
+      text += ev.details.resourceEmoji + " " + ev.details.resourceName + " x" + ev.details.count + " 획득!\n";
+    }
   }
 
   // 칭호 체크
@@ -5815,11 +6075,13 @@ function _response(room, msg, sender, isGroupChat, replier, imageDB, packageName
   }
 }
 
-function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
-  if (packageName !== "com.kakao.talk") return;
-  try {
-    _response(room, msg, sender, isGroupChat, replier, imageDB, packageName);
-  } catch (e) {
-    Log.e("싱봇 오류: " + e.toString());
-  }
-}
+// response()는 loader.js에서 정의 (GitHub 실시간 로드 방식)
+// 직접 실행 시에는 아래 주석을 해제하세요:
+// function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+//   if (packageName !== "com.kakao.talk") return;
+//   try {
+//     _response(room, msg, sender, isGroupChat, replier, imageDB, packageName);
+//   } catch (e) {
+//     Log.e("싱봇 오류: " + e.toString());
+//   }
+// }

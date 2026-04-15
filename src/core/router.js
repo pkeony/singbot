@@ -190,11 +190,13 @@ function _response(room, msg, sender, isGroupChat, replier, imageDB, packageName
   }
 }
 
-function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
-  if (packageName !== "com.kakao.talk") return;
-  try {
-    _response(room, msg, sender, isGroupChat, replier, imageDB, packageName);
-  } catch (e) {
-    Log.e("싱봇 오류: " + e.toString());
-  }
-}
+// response()는 loader.js에서 정의 (GitHub 실시간 로드 방식)
+// 직접 실행 시에는 아래 주석을 해제하세요:
+// function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+//   if (packageName !== "com.kakao.talk") return;
+//   try {
+//     _response(room, msg, sender, isGroupChat, replier, imageDB, packageName);
+//   } catch (e) {
+//     Log.e("싱봇 오류: " + e.toString());
+//   }
+// }
