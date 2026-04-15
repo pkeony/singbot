@@ -11,7 +11,8 @@
  */
 
 // ★ 여기만 본인 GitHub 레포 정보로 변경하세요
-var GITHUB_RAW_URL = "https://raw.githubusercontent.com/pkeony/singbot/main/main.js";
+var GITHUB_RAW_URL =
+  'https://raw.githubusercontent.com/pkeony/singbot/main/main.js';
 
 // 캐시
 var _cachedCode = null;
@@ -25,18 +26,18 @@ var CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
  */
 function fetchText(url) {
   var conn = new java.net.URL(url).openConnection();
-  conn.setRequestMethod("GET");
+  conn.setRequestMethod('GET');
   conn.setConnectTimeout(5000);
   conn.setReadTimeout(5000);
 
   var reader = new java.io.BufferedReader(
-    new java.io.InputStreamReader(conn.getInputStream(), "UTF-8")
+    new java.io.InputStreamReader(conn.getInputStream(), 'UTF-8')
   );
   var line;
   var result = new java.lang.StringBuilder();
   while ((line = reader.readLine()) !== null) {
     result.append(line);
-    result.append("\n");
+    result.append('\n');
   }
   reader.close();
   conn.disconnect();
@@ -47,7 +48,7 @@ function loadLatestCode() {
   var now = Date.now();
 
   // 캐시가 유효하면 재사용
-  if (_cachedCode && (now - _lastFetchTime) < CACHE_DURATION) {
+  if (_cachedCode && now - _lastFetchTime < CACHE_DURATION) {
     return _cachedCode;
   }
 
@@ -55,13 +56,13 @@ function loadLatestCode() {
     var code = fetchText(GITHUB_RAW_URL);
     _cachedCode = code;
     _lastFetchTime = now;
-    Log.i("싱봇 코드 로드 성공 (" + code.length + "자)");
+    Log.i('싱봇 코드 로드 성공 (' + code.length + '자)');
     return code;
   } catch (e) {
-    Log.e("싱봇 코드 로드 실패: " + e);
+    Log.e('싱봇 코드 로드 실패: ' + e);
     // 이전 캐시가 있으면 폴백
     if (_cachedCode) {
-      Log.i("캐시된 코드로 폴백");
+      Log.i('캐시된 코드로 폴백');
       return _cachedCode;
     }
     return null;
@@ -71,7 +72,8 @@ function loadLatestCode() {
 function initBot() {
   var code = loadLatestCode();
   if (code) {
-    eval(code);
+    // 글로벌 스코프에서 eval 실행 (함수 안에서 하면 로컬에 갇힘)
+    (1, eval)(code);
     _initialized = true;
     return true;
   }
@@ -79,17 +81,25 @@ function initBot() {
 }
 
 // 메신저봇R 진입점
-function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
-  if (packageName !== "com.kakao.talk") return;
+function response(
+  room,
+  msg,
+  sender,
+  isGroupChat,
+  replier,
+  imageDB,
+  packageName
+) {
+  if (packageName !== 'com.kakao.talk') return;
 
   // 수동 업데이트 명령
-  if (msg.trim() === "싱봇업데이트") {
+  if (msg.trim() === '싱봇업데이트') {
     _cachedCode = null;
     _initialized = false;
     if (initBot()) {
-      replier.reply("[ 싱봇 ] 최신 코드로 업데이트 완료!");
+      replier.reply('[ 싱봇 ] 최신 코드로 업데이트 완료!');
     } else {
-      replier.reply("[ 싱봇 ] 업데이트 실패 - 네트워크를 확인하세요");
+      replier.reply('[ 싱봇 ] 업데이트 실패 - 네트워크를 확인하세요');
     }
     return;
   }
@@ -103,6 +113,6 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
   try {
     _response(room, msg, sender, isGroupChat, replier, imageDB, packageName);
   } catch (e) {
-    Log.e("싱봇 오류: " + e);
+    Log.e('싱봇 오류: ' + e);
   }
 }
