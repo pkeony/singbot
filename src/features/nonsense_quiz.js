@@ -28,6 +28,7 @@ function generateNonsenseHint(answer, level, naverHint) {
 
 function handleNonsenseStart(room, msg, sender, replier) {
   initRoom(room);
+  var nonsenseDb = getNonsenseDb();
 
   if (roomState[room].activeQuiz) {
     replier.reply("이미 퀴즈가 진행 중입니다! '정답 [답]'으로 답해주세요.");
@@ -36,16 +37,16 @@ function handleNonsenseStart(room, msg, sender, replier) {
 
   var used = roomState[room].usedQuestions.nonsense;
   var available = [];
-  for (var i = 0; i < NONSENSE_DB.length; i++) {
+  for (var i = 0; i < nonsenseDb.length; i++) {
     if (used.indexOf(i) === -1) available.push(i);
   }
   if (available.length === 0) {
     roomState[room].usedQuestions.nonsense = [];
-    for (var i = 0; i < NONSENSE_DB.length; i++) available.push(i);
+    for (var i = 0; i < nonsenseDb.length; i++) available.push(i);
   }
 
   var idx = pickRandom(available);
-  var quiz = NONSENSE_DB[idx];
+  var quiz = nonsenseDb[idx];
   roomState[room].usedQuestions.nonsense.push(idx);
 
   var hint = generateNonsenseHint(quiz.a, 0, quiz.h);

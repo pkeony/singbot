@@ -2875,3 +2875,12 @@ var MINE_COMMANDS = [
   { triggers: _mt(["광산칭호장착"]), handler: handleTitleEquip, hasArgs: true },
   { triggers: _mt(["광산칭호"]), handler: handleTitleList }
 ];
+
+for (var _mineCmdIdx = 0; _mineCmdIdx < MINE_COMMANDS.length; _mineCmdIdx++) {
+  MINE_COMMANDS[_mineCmdIdx].handler = (function(originalHandler) {
+    return function(room, msg, sender, replier) {
+      ensureMineDataLoaded();
+      return originalHandler(room, msg, sender, replier);
+    };
+  })(MINE_COMMANDS[_mineCmdIdx].handler);
+}

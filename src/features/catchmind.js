@@ -30,6 +30,7 @@ function generateCatchmindHint(answer, level) {
 
 function handleCatchmindStart(room, msg, sender, replier) {
   initRoom(room);
+  var catchmindDb = getCatchmindDb();
 
   if (roomState[room].activeQuiz) {
     replier.reply("이미 퀴즈가 진행 중입니다! '정답 [답]'으로 답해주세요.");
@@ -39,16 +40,16 @@ function handleCatchmindStart(room, msg, sender, replier) {
   // 안 쓴 문제 찾기
   var used = roomState[room].usedQuestions.catchmind;
   var available = [];
-  for (var i = 0; i < CATCHMIND_DB.length; i++) {
+  for (var i = 0; i < catchmindDb.length; i++) {
     if (used.indexOf(i) === -1) available.push(i);
   }
   if (available.length === 0) {
     roomState[room].usedQuestions.catchmind = [];
-    for (var i = 0; i < CATCHMIND_DB.length; i++) available.push(i);
+    for (var i = 0; i < catchmindDb.length; i++) available.push(i);
   }
 
   var idx = pickRandom(available);
-  var quiz = CATCHMIND_DB[idx];
+  var quiz = catchmindDb[idx];
   roomState[room].usedQuestions.catchmind.push(idx);
 
   var hint = generateCatchmindHint(quiz.answer, 0);

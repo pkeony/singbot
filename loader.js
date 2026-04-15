@@ -6,7 +6,7 @@
  */
 
 var GITHUB_RAW_URL = "https://raw.githubusercontent.com/pkeony/singbot/main/main.js";
-var CACHE_DURATION = 5 * 60 * 1000;
+var CACHE_DURATION = 60 * 60 * 1000;
 var _cachedCode = null;
 var _lastFetchTime = 0;
 

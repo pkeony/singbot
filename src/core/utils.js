@@ -54,3 +54,30 @@ function generateBar(score) {
   }
   return bar;
 }
+
+var GITHUB_RAW_BASE_URL = "https://raw.githubusercontent.com/pkeony/singbot/main/";
+var _jsonCache = {};
+
+function fetchText(url) {
+  var conn = new java.net.URL(url).openConnection();
+  conn.setConnectTimeout(5000);
+  conn.setReadTimeout(5000);
+  var reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"));
+  var sb = new java.lang.StringBuilder();
+  var line;
+  while ((line = reader.readLine()) !== null) {
+    sb.append(line);
+    sb.append("\n");
+  }
+  reader.close();
+  conn.disconnect();
+  return String(sb.toString());
+}
+
+function loadJsonData(path) {
+  if (_jsonCache.hasOwnProperty(path)) return _jsonCache[path];
+  var text = fetchText(GITHUB_RAW_BASE_URL + path);
+  var data = JSON.parse(text);
+  _jsonCache[path] = data;
+  return data;
+}

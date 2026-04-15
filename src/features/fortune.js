@@ -40,6 +40,7 @@ function fetchNaverStarFortune(constellation) {
 }
 
 function handleFortune(room, msg, sender, replier) {
+  var fortuneDb = getFortuneDb();
   var input = msg.replace(/^(운세|오늘의운세)[,\s]*/, "").trim();
   var name, year, month, day, gender;
 
@@ -101,17 +102,17 @@ function handleFortune(room, msg, sender, replier) {
     var s3 = Math.abs(hashCode(baseKey + "body"));
     var s4 = Math.abs(hashCode(baseKey + "close"));
 
-    result += "총운: \"" + FORTUNE_WORD[s1 % FORTUNE_WORD.length] + "\"\n\n";
-    result += FORTUNE_INTRO[s2 % FORTUNE_INTRO.length] + " ";
-    result += FORTUNE_BODY[s3 % FORTUNE_BODY.length] + " ";
-    result += FORTUNE_CLOSING[s4 % FORTUNE_CLOSING.length];
+    result += "총운: \"" + fortuneDb.word[s1 % fortuneDb.word.length] + "\"\n\n";
+    result += fortuneDb.intro[s2 % fortuneDb.intro.length] + " ";
+    result += fortuneDb.body[s3 % fortuneDb.body.length] + " ";
+    result += fortuneDb.closing[s4 % fortuneDb.closing.length];
   }
 
   result += "\n\n━━━━━━━━━━━━━━━━━━\n";
 
   var s5 = Math.abs(hashCode(name + year + month + day + gender + todayString() + "luck"));
   result += "🔮 행운지수: " + generateBar((s5 % 100) + 1) + " " + ((s5 % 100) + 1) + "점\n";
-  result += "🎨 행운의 색: " + LUCKY_COLORS[Math.abs(hashCode(name + year + todayString() + "color")) % LUCKY_COLORS.length] + "\n";
+  result += "🎨 행운의 색: " + fortuneDb.luckyColors[Math.abs(hashCode(name + year + todayString() + "color")) % fortuneDb.luckyColors.length] + "\n";
   result += "🔢 행운의 숫자: " + ((Math.abs(hashCode(name + day + todayString() + "num")) % 45) + 1);
 
   replier.reply(result);
