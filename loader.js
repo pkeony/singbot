@@ -11,26 +11,19 @@ var _cachedCode = null;
 var _lastFetchTime = 0;
 
 function fetchText(url) {
-  try {
-    return String(org.jsoup.Jsoup.connect(url).ignoreContentType(true).timeout(5000).get().text());
-  } catch (e1) {}
-  try {
-    var conn = new java.net.URL(url).openConnection();
-    conn.setConnectTimeout(5000);
-    conn.setReadTimeout(5000);
-    var reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"));
-    var sb = new java.lang.StringBuilder();
-    var line;
-    while ((line = reader.readLine()) !== null) {
-      sb.append(line);
-      sb.append("\n");
-    }
-    reader.close();
-    conn.disconnect();
-    return String(sb.toString());
-  } catch (e2) {
-    throw new Error("HTTP 실패: " + e2);
+  var conn = new java.net.URL(url).openConnection();
+  conn.setConnectTimeout(5000);
+  conn.setReadTimeout(5000);
+  var reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"));
+  var sb = new java.lang.StringBuilder();
+  var line;
+  while ((line = reader.readLine()) !== null) {
+    sb.append(line);
+    sb.append("\n");
   }
+  reader.close();
+  conn.disconnect();
+  return String(sb.toString());
 }
 
 function loadAndEval() {
