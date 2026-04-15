@@ -256,10 +256,20 @@ function fetchText(url) {
 
 function loadJsonData(path) {
   if (_jsonCache.hasOwnProperty(path)) return _jsonCache[path];
-  var text = fetchText(GITHUB_RAW_BASE_URL + path);
-  var data = JSON.parse(text);
-  _jsonCache[path] = data;
-  return data;
+  var url = GITHUB_RAW_BASE_URL + path;
+  var text;
+  try {
+    text = fetchText(url);
+  } catch (e) {
+    throw new Error("DB 네트워크 로드 실패 (" + url + "): " + e);
+  }
+  try {
+    var data = JSON.parse(text);
+    _jsonCache[path] = data;
+    return data;
+  } catch (e2) {
+    throw new Error("DB JSON 파싱 실패 (" + url + "): " + e2);
+  }
 }
 // ===== 싱봇 상태 관리 =====
 
@@ -801,7 +811,7 @@ function handleChatReset(room, msg, sender, replier) {
 
 var MineData = null;
 
-function ensureMineDataLoaded() {
+function getMineData() {
   if (MineData) return MineData;
 
   MineData = loadJsonData("data/mine_db.json");
@@ -814,6 +824,10 @@ function ensureMineDataLoaded() {
   }
 
   return MineData;
+}
+
+function ensureMineDataLoaded() {
+  return getMineData();
 }
 // ===== 싱봇 광산 게임 =====
 
@@ -3696,7 +3710,7 @@ var MINE_COMMANDS = [
 for (var _mineCmdIdx = 0; _mineCmdIdx < MINE_COMMANDS.length; _mineCmdIdx++) {
   MINE_COMMANDS[_mineCmdIdx].handler = (function(originalHandler) {
     return function(room, msg, sender, replier) {
-      ensureMineDataLoaded();
+      getMineData();
       return originalHandler(room, msg, sender, replier);
     };
   })(MINE_COMMANDS[_mineCmdIdx].handler);

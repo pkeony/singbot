@@ -2,7 +2,7 @@
 
 var MineData = null;
 
-function ensureMineDataLoaded() {
+function getMineData() {
   if (MineData) return MineData;
 
   MineData = loadJsonData("data/mine_db.json");
@@ -15,4 +15,8 @@ function ensureMineDataLoaded() {
   }
 
   return MineData;
+}
+
+function ensureMineDataLoaded() {
+  return getMineData();
 }

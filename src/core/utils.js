@@ -76,8 +76,18 @@ function fetchText(url) {
 
 function loadJsonData(path) {
   if (_jsonCache.hasOwnProperty(path)) return _jsonCache[path];
-  var text = fetchText(GITHUB_RAW_BASE_URL + path);
-  var data = JSON.parse(text);
-  _jsonCache[path] = data;
-  return data;
+  var url = GITHUB_RAW_BASE_URL + path;
+  var text;
+  try {
+    text = fetchText(url);
+  } catch (e) {
+    throw new Error("DB 네트워크 로드 실패 (" + url + "): " + e);
+  }
+  try {
+    var data = JSON.parse(text);
+    _jsonCache[path] = data;
+    return data;
+  } catch (e2) {
+    throw new Error("DB JSON 파싱 실패 (" + url + "): " + e2);
+  }
 }

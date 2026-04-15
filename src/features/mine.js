@@ -2879,7 +2879,7 @@ var MINE_COMMANDS = [
 for (var _mineCmdIdx = 0; _mineCmdIdx < MINE_COMMANDS.length; _mineCmdIdx++) {
   MINE_COMMANDS[_mineCmdIdx].handler = (function(originalHandler) {
     return function(room, msg, sender, replier) {
-      ensureMineDataLoaded();
+      getMineData();
       return originalHandler(room, msg, sender, replier);
     };
   })(MINE_COMMANDS[_mineCmdIdx].handler);
