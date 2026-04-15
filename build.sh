@@ -1,5 +1,6 @@
 #!/bin/bash
 # singbot 빌드 스크립트 - src/ 파일들을 main.js로 합침
+# 대용량 DB 본문은 data/*.json 으로 분리되어 있고, src/data/*.js 는 lazy loader 스텁만 포함
 
 OUTPUT="main.js"
 
