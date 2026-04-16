@@ -118,7 +118,9 @@ function handleHelp(room, msg, sender, replier) {
     "🤖 ~ <질문> — AI 대화\n" +
     "🔄 대화초기화 — AI 대화 기록 리셋\n\n" +
     "⛏️ ㄱㅅ등록 [이름] — 광산 게임 시작\n" +
-    "⛏️ ㄱㅅ도움말 — 광산 명령어 보기"
+    "⛏️ ㄱㅅ도움말 — 광산 명령어 보기\n\n" +
+    "🎬 CGV — 용아맥 새 상영 알림 확인\n" +
+    "🎬 CGV도움말 — CGV 명령어 보기"
   );
 }
 
@@ -166,10 +168,13 @@ function _response(room, msg, sender, isGroupChat, replier, imageDB, packageName
     }
   }
 
-  // 2. 전역 명령 (COMMANDS + MINE_COMMANDS)
+  // 2. 전역 명령 (COMMANDS + MINE_COMMANDS + CGV_COMMANDS)
   var allCommands = COMMANDS;
   if (typeof MINE_COMMANDS !== "undefined") {
     allCommands = COMMANDS.concat(MINE_COMMANDS);
+  }
+  if (typeof CGV_COMMANDS !== "undefined") {
+    allCommands = allCommands.concat(CGV_COMMANDS);
   }
   for (var i = 0; i < allCommands.length; i++) {
     var cmd = allCommands[i];
