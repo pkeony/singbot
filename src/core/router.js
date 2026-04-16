@@ -119,7 +119,7 @@ function handleHelp(room, msg, sender, replier) {
     "🔄 대화초기화 — AI 대화 기록 리셋\n\n" +
     "⛏️ ㄱㅅ등록 [이름] — 광산 게임 시작\n" +
     "⛏️ ㄱㅅ도움말 — 광산 명령어 보기\n\n" +
-    "🎬 CGV — 용아맥 새 상영 알림 확인\n" +
+    "🎬 CGV등록 영화 날짜 — 상영 감시 등록\n" +
     "🎬 CGV도움말 — CGV 명령어 보기"
   );
 }

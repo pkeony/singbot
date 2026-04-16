@@ -1,6 +1,11 @@
-// CGV 용산아이파크몰 — 특정 영화+날짜 상영 스케줄 알림 봇
-const puppeteer = require("puppeteer");
-const crypto = require("crypto");
+// CGV 용산아이파크몰 — 영화+날짜 상영 스케줄 알림 봇
+// watch_list.json 기반 동적 감시, movie_list.json 자동 갱신
+let puppeteer;
+try {
+  puppeteer = require("puppeteer-core");
+} catch {
+  puppeteer = require("puppeteer");
+}
 const fs = require("fs");
 const path = require("path");
 
@@ -11,14 +16,20 @@ const CONFIG = {
   CO_CD: "A420",
   NTFY_TOPIC: process.env.NTFY_TOPIC || "kelvin-cgv-imax",
   STATE_FILE: path.join(__dirname, "last_state.json"),
-
-  // ===== 감시할 영화 + 날짜 =====
-  WATCH_LIST: [
-    { movNo: "30000994", movNm: "프로젝트 헤일메리", dates: ["20260421"] },
-    // 추가 예시:
-    // { movNo: "30001072", movNm: "짱구", dates: ["20260422", "20260423"] },
-  ],
+  WATCHLIST_FILE: path.join(__dirname, "watch_list.json"),
+  MOVIELIST_FILE: path.join(__dirname, "movie_list.json"),
 };
+
+const TIMEOUT = 180000;
+
+// ===== 감시 목록 로드 =====
+function loadWatchList() {
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG.WATCHLIST_FILE, "utf8"));
+  } catch {
+    return [];
+  }
+}
 
 // ===== 상태 저장/로드 =====
 function loadState() {
@@ -33,18 +44,19 @@ function saveState(state) {
   fs.writeFileSync(CONFIG.STATE_FILE, JSON.stringify(state, null, 2));
 }
 
-// ===== ntfy 알림 =====
+// ===== ntfy 알림 (JSON API) =====
 async function notify(title, message) {
   try {
-    await fetch(`https://ntfy.sh/${CONFIG.NTFY_TOPIC}`, {
+    await fetch("https://ntfy.sh", {
       method: "POST",
-      headers: {
-        Title: Buffer.from(title).toString("base64"),
-        Priority: "high",
-        Tags: "movie_camera",
-        Encoding: "base64",
-      },
-      body: Buffer.from(message).toString("base64"),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: CONFIG.NTFY_TOPIC,
+        title: title,
+        message: message,
+        priority: 4,
+        tags: ["movie_camera"],
+      }),
     });
     console.log(`[알림] ${title} — ${message}`);
   } catch (err) {
@@ -59,14 +71,13 @@ function groupByHall(scheduleData) {
     const hall = s.scnsNm;
     if (!halls[hall]) halls[hall] = [];
     halls[hall].push({
-      startTime: s.scnsrtTm, // "0800"
-      endTime: s.scnendTm,   // "1046"
-      format: s.movkndDsplNm,// "IMAX LASER 2D"
+      startTime: s.scnsrtTm,
+      endTime: s.scnendTm,
+      format: s.movkndDsplNm,
       totalSeats: s.stcnt,
       freeSeats: s.frSeatCnt,
     });
   }
-  // 시간순 정렬
   for (const hall of Object.keys(halls)) {
     halls[hall].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
@@ -86,12 +97,16 @@ async function main() {
   const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
   console.log(`[${now}] CGV 용아맥 체크 시작`);
 
+  const watchList = loadWatchList();
+  if (watchList.length === 0) {
+    console.log("[INFO] 감시 목록이 비어있습니다. 영화 목록만 업데이트합니다.");
+  }
+
   let browser;
   try {
-    browser = await puppeteer.launch({
-      ...(process.env.PUPPETEER_EXECUTABLE_PATH ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH } : {}),
+    const launchOptions = {
       headless: "new",
-      protocolTimeout: 60000,
+      protocolTimeout: TIMEOUT,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -107,9 +122,16 @@ async function main() {
         "--metrics-recording-only",
         "--no-first-run",
       ],
-    });
+    };
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
 
+    browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
+    page.setDefaultNavigationTimeout(TIMEOUT);
+    page.setDefaultTimeout(TIMEOUT);
+
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, "webdriver", { get: () => false });
     });
@@ -129,34 +151,66 @@ async function main() {
     });
 
     // 1. CGV 메인 방문 (Cloudflare 쿠키)
-    await page.goto("https://www.cgv.co.kr/", { waitUntil: "networkidle0", timeout: 60000 });
+    await page.goto("https://www.cgv.co.kr/", {
+      waitUntil: "networkidle0",
+      timeout: TIMEOUT,
+    });
     console.log("[OK] CGV 메인 로드");
 
-    // 2. 각 감시 대상 영화+날짜별 스케줄 조회
-    const results = await page.evaluate(async (config) => {
+    // 2. API 조회 (스케줄 + 영화 목록)
+    const evalConfig = {
+      CGV_SECRET: CONFIG.CGV_SECRET,
+      SITE_NO: CONFIG.SITE_NO,
+      CO_CD: CONFIG.CO_CD,
+      watchList: watchList,
+    };
+
+    const { schedules, movieList } = await page.evaluate(async (config) => {
       async function cgvFetch(pathname, params) {
-        const url = "https://api.cgv.co.kr" + pathname + "?" + new URLSearchParams(params);
+        const url =
+          "https://api.cgv.co.kr" +
+          pathname +
+          "?" +
+          new URLSearchParams(params);
         const ts = Math.floor(Date.now() / 1000).toString();
         const enc = new TextEncoder();
-        const key = await crypto.subtle.importKey("raw", enc.encode(config.CGV_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-        const sig = await crypto.subtle.sign("HMAC", key, enc.encode(ts + "|" + pathname + "|"));
+        const key = await crypto.subtle.importKey(
+          "raw",
+          enc.encode(config.CGV_SECRET),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"]
+        );
+        const sig = await crypto.subtle.sign(
+          "HMAC",
+          key,
+          enc.encode(ts + "|" + pathname + "|")
+        );
         const signature = btoa(String.fromCharCode(...new Uint8Array(sig)));
         const r = await fetch(url, {
-          headers: { Accept: "application/json", "X-TIMESTAMP": ts, "X-SIGNATURE": signature },
+          headers: {
+            Accept: "application/json",
+            "X-TIMESTAMP": ts,
+            "X-SIGNATURE": signature,
+          },
           credentials: "include",
         });
         return r.json();
       }
 
-      const output = {};
-      for (const watch of config.WATCH_LIST) {
+      // 스케줄 조회
+      const schedules = {};
+      for (const watch of config.watchList) {
         for (const date of watch.dates) {
           const key = watch.movNo + "_" + date;
           const sch = await cgvFetch("/cnm/atkt/searchSchByMov", {
-            coCd: config.CO_CD, siteNo: config.SITE_NO,
-            movNo: watch.movNo, scnYmd: date, rtctlScopCd: "01",
+            coCd: config.CO_CD,
+            siteNo: config.SITE_NO,
+            movNo: watch.movNo,
+            scnYmd: date,
+            rtctlScopCd: "01",
           });
-          output[key] = {
+          schedules[key] = {
             movNm: watch.movNm,
             date: date,
             sessions: (sch.data || []).map((s) => ({
@@ -170,25 +224,62 @@ async function main() {
           };
         }
       }
-      return output;
-    }, CONFIG);
 
-    console.log(`[OK] API 조회 완료`);
+      // 영화 목록 조회 (검색용)
+      let movieList = [];
+      try {
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+        const ml = await cgvFetch("/cnm/atkt/searchAtktTopPostrList", {
+          coCd: config.CO_CD,
+          siteNo: config.SITE_NO,
+          scnYmd: today,
+        });
+        movieList = (ml.data || []).map((m) => ({
+          movNo: m.movNo,
+          movNm: m.movNm,
+        }));
+      } catch (e) {
+        // 영화 목록 실패해도 스케줄 체크는 계속
+      }
+
+      return { schedules, movieList };
+    }, evalConfig);
+
+    console.log("[OK] API 조회 완료");
+
+    // 영화 목록 저장
+    if (movieList && movieList.length > 0) {
+      fs.writeFileSync(
+        CONFIG.MOVIELIST_FILE,
+        JSON.stringify(movieList, null, 2)
+      );
+      console.log(`[OK] 영화 목록 저장: ${movieList.length}개`);
+    }
+
+    // 감시 목록이 비어있으면 여기서 종료
+    if (watchList.length === 0) {
+      console.log("[완료] 영화 목록만 업데이트됨\n");
+      return;
+    }
 
     // 3. 이전 상태와 비교
     const prevState = loadState();
     const isFirstRun = Object.keys(prevState).length === 0;
 
-    for (const [key, data] of Object.entries(results)) {
+    for (const [key, data] of Object.entries(schedules)) {
       const halls = groupByHall(data.sessions);
       const prevHalls = prevState[key] || {};
 
       if (isFirstRun) {
-        // 첫 실행: 현재 상태만 저장, 알림 없음
         const hallSummary = Object.entries(halls)
-          .map(([h, s]) => `  ${h}: ${s.map((x) => formatTime(x.startTime)).join(", ")}`)
+          .map(
+            ([h, s]) =>
+              `  ${h}: ${s.map((x) => formatTime(x.startTime)).join(", ")}`
+          )
           .join("\n");
-        console.log(`[초기] ${data.movNm} (${formatDate(data.date)})\n${hallSummary}`);
+        console.log(
+          `[초기] ${data.movNm} (${formatDate(data.date)})\n${hallSummary}`
+        );
         continue;
       }
 
@@ -196,10 +287,14 @@ async function main() {
       for (const [hall, sessions] of Object.entries(halls)) {
         const prevSessions = prevHalls[hall] || [];
         const prevTimes = prevSessions.map((s) => s.startTime);
-        const newSessions = sessions.filter((s) => !prevTimes.includes(s.startTime));
+        const newSessions = sessions.filter(
+          (s) => !prevTimes.includes(s.startTime)
+        );
 
         if (newSessions.length > 0) {
-          const times = newSessions.map((s) => formatTime(s.startTime)).join(", ");
+          const times = newSessions
+            .map((s) => formatTime(s.startTime))
+            .join(", ");
           const format = newSessions[0].format || "";
           await notify(
             `${data.movNm} 새 상영!`,
@@ -213,16 +308,13 @@ async function main() {
         if (!prevHalls[hall]) {
           const sessions = halls[hall];
           const times = sessions.map((s) => formatTime(s.startTime)).join(", ");
-          if (!isFirstRun) {
-            await notify(
-              `${data.movNm} 새 상영관!`,
-              `${formatDate(data.date)} ${hall} 오픈!\n${times}`
-            );
-          }
+          await notify(
+            `${data.movNm} 새 상영관!`,
+            `${formatDate(data.date)} ${hall} 오픈!\n${times}`
+          );
         }
       }
 
-      // 상태 업데이트 (상영관별 시간 저장)
       prevState[key] = halls;
     }
 
