@@ -6334,6 +6334,43 @@ function handleCatPrestige(room, msg, sender, replier) {
   );
 }
 
+// === 핸들러: 설명서 ===
+
+function handleCatGuide(room, msg, sender, replier) {
+  replier.reply(
+    "[ 싱봇 냥냥이 ] 🐱 게임 설명서\n" +
+    "━━━━━━━━━━━━━━━━━━\n\n" +
+    "카톡에서 나만의 고양이를 키우는 게임!\n" +
+    "고양이마다 성격이 달라서 같은 행동도\n" +
+    "결과가 달라요. 내 냥이만의 이야기!\n\n" +
+    "【 시작 】\n" +
+    "ㄴㄴㅇ등록 나비 → 알 도착!\n" +
+    "ㄴㄴㅇ돌봐 x3 → 부화! (품종/성격 공개)\n\n" +
+    "【 돌봄 】\n" +
+    "ㅁㅁ 츄르 → 밥 (7종, 성격별 반응 다름)\n" +
+    "ㄴㄹ 실뭉치 → 놀기 (에너지 소모)\n" +
+    "ㄴㄴㅇ재워 → 자면 꿈을 꿔요!\n\n" +
+    "【 모험 】\n" +
+    "ㅁㅎ 뒷마당 → 실시간 탐험 (30분~4시간)\n" +
+    "ㅁㅎㄱㄱ → 스토리 + 전리품 확인!\n" +
+    "9개 장소, 성장하면 새 장소 해금\n\n" +
+    "【 기술 훈련 】\n" +
+    "ㅎㄹ 앉아 → 스킬트리 4단계 (11개)\n" +
+    "배달부 = 패시브 수입!\n" +
+    "보물찾기 = 모험 전리품 2배!\n\n" +
+    "【 특별 시스템 】\n" +
+    "💤 꿈 — 2시간+ 방치하면 꿈 보상!\n" +
+    "❗ 이벤트 — 15% 확률 랜덤 발생\n" +
+    "📋 퀘스트 — 매일 3개 (ㄴㄴㅋ)\n" +
+    "🏆 업적 — 25개 달성 보상\n" +
+    "🤝 소셜 — 다른 냥이와 인사\n\n" +
+    "【 엔드게임 】\n" +
+    "🐱→🐈→🐈‍⬛장로묘 → 비밀진화 5종!\n" +
+    "🔄 환생 → 영구 보너스 + 재시작\n\n" +
+    "'ㄴㄴㄷ' 전체 명령어 보기"
+  );
+}
+
 // === 핸들러: 도움말 ===
 
 function handleCatHelp(room, msg, sender, replier) {
@@ -6385,6 +6422,7 @@ var CAT_COMMANDS = [
   { triggers: _ct(["냥냥이구매"]).concat(["ㄴㄴㄱ"]), handler: handleCatBuy, hasArgs: true },
   { triggers: _ct(["냥냥이인벤"]).concat(["ㄴㄴㅇㅂ"]), handler: handleCatInventory },
   { triggers: _ct(["냥냥이의상"]), handler: handleCatOutfit, hasArgs: true },
+  { triggers: _ct(["냥냥이설명"]).concat(["ㄴㄴㅅㅁ"]), handler: handleCatGuide },
   { triggers: _ct(["냥냥이도움말"]).concat(["ㄴㄴㄷ"]), handler: handleCatHelp },
   { triggers: _ct(["냥냥이", "냥냥이정보"]).concat(["ㄴㄴ"]), handler: handleCatInfo }
 ];
