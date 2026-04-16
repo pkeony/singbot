@@ -1,15 +1,15 @@
 // ===== Gemma AI 대화 =====
 
-var GEMMA_API_KEY = (function() {
+var GEMMA_MODEL = "gemma-4-31b-it";
+
+function _getApiKey() {
   try {
     var raw = FileStream.read(DATA_DIR + "api_key.txt");
     return raw ? raw.trim() : "";
   } catch (e) {
     return "";
   }
-})();
-var GEMMA_MODEL = "gemma-4-31b-it";
-var GEMMA_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMMA_MODEL + ":generateContent?key=" + GEMMA_API_KEY;
+}
 
 var chatHistory = {};
 
@@ -20,10 +20,12 @@ function handleChat(room, msg, sender, replier) {
     return;
   }
 
-  if (!GEMMA_API_KEY) {
+  var apiKey = _getApiKey();
+  if (!apiKey) {
     replier.reply("API 키가 설정되지 않았어요.\n" + DATA_DIR + "api_key.txt 파일에 키를 넣어주세요.");
     return;
   }
+  var GEMMA_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMMA_MODEL + ":generateContent?key=" + apiKey;
 
   // 대화 기록 관리 (방별, 유저별, 최근 10턴)
   var historyKey = room + ":" + sender;
