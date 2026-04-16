@@ -34,32 +34,29 @@ const puppeteer = require("puppeteer");
     const CO_CD = "A420";
     const SITE_NO = "0013"; // 용산아이파크몰
 
-    // 1. 영화 목록에서 '프로젝트 헤일메리' 찾기
-    const movies = await cgvFetch("/cnm/atkt/searchOnlyCgvMovList", { coCd: CO_CD, siteNo: SITE_NO });
+    // 1. 영화 목록 (일반 영화 포함)
+    const movies = await cgvFetch("/cnm/atkt/searchAtktTopPostrList", { coCd: CO_CD });
     output.allMovies = (movies.data || []).map((m) => ({ movNo: m.movNo, movNm: m.movNm }));
 
-    const target = (movies.data || []).find((m) => m.movNm.includes("헤일메리"));
-    if (!target) {
-      output.error = "영화를 찾을 수 없음";
-      return output;
-    }
-    output.targetMovie = { movNo: target.movNo, movNm: target.movNm };
+    // 프로젝트 헤일메리 movNo = 30000994
+    const MOV_NO = "30000994";
+    output.targetMovie = "프로젝트 헤일메리 (30000994)";
 
     // 2. searchSchByMov — 영화별 상영 스케줄
     const sch = await cgvFetch("/cnm/atkt/searchSchByMov", {
-      coCd: CO_CD, siteNo: SITE_NO, movNo: target.movNo, scnYmd: "20260421", rtctlScopCd: "01",
+      coCd: CO_CD, siteNo: SITE_NO, movNo: MOV_NO, scnYmd: "20260421", rtctlScopCd: "01",
     });
     output.scheduleByMov = sch;
 
-    // 3. 다른 API도 시도
+    // 3. searchMovScnInfo
     const sch2 = await cgvFetch("/cnm/atkt/searchMovScnInfo", {
-      coCd: CO_CD, siteNo: SITE_NO, movNo: target.movNo, scnYmd: "20260421",
+      coCd: CO_CD, siteNo: SITE_NO, movNo: MOV_NO, scnYmd: "20260421",
     });
     output.movScnInfo = sch2;
 
     // 4. 상영 날짜 조회
     const dates = await cgvFetch("/cnm/atkt/searchSiteScnscYmdListByMov", {
-      coCd: CO_CD, siteNo: SITE_NO, movNo: target.movNo,
+      coCd: CO_CD, siteNo: SITE_NO, movNo: MOV_NO,
     });
     output.movieDates = dates;
 
