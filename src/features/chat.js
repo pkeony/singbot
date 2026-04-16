@@ -1,6 +1,13 @@
 // ===== Gemma AI 대화 =====
 
-var GEMMA_API_KEY = "AIzaSyCejLMCDgAe6-YEgW0fS2oSPF0_6xPwiY4";
+var GEMMA_API_KEY = (function() {
+  try {
+    var raw = FileStream.read(DATA_DIR + "api_key.txt");
+    return raw ? raw.trim() : "";
+  } catch (e) {
+    return "";
+  }
+})();
 var GEMMA_MODEL = "gemma-4-31b-it";
 var GEMMA_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMMA_MODEL + ":generateContent?key=" + GEMMA_API_KEY;
 
@@ -10,6 +17,11 @@ function handleChat(room, msg, sender, replier) {
   var prompt = msg.replace(/^~\s*/, "").trim();
   if (!prompt) {
     replier.reply("사용법: ~ <질문>\n예) ~ 오늘 뭐 먹지?");
+    return;
+  }
+
+  if (!GEMMA_API_KEY) {
+    replier.reply("API 키가 설정되지 않았어요.\n" + DATA_DIR + "api_key.txt 파일에 키를 넣어주세요.");
     return;
   }
 

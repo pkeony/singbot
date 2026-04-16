@@ -7,3 +7,4 @@ node_modules/
 site/
 test/
 data/newdata/
+api_key.txt
