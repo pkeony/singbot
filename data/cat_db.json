@@ -1,0 +1,209 @@
+{
+  "config": {
+    "HUNGER_DECAY_PER_HOUR": 3,
+    "HAPPINESS_DECAY_PER_HOUR": 2,
+    "ENERGY_REGEN_PER_HOUR": 5,
+    "TRUST_DECAY_AFTER_HOURS": 6,
+    "TRUST_DECAY_PER_HOUR": 0.5,
+    "HEALTH_DECAY_PER_6H_NEGLECT": 1,
+    "MAX_DAILY_FEED": 5,
+    "MAX_DAILY_PLAY": 5,
+    "MAX_DAILY_TRAIN": 3,
+    "DREAM_MIN_IDLE_MS": 7200000,
+    "HATCH_INTERACTIONS": 3,
+    "HATCH_MIN_INTERVAL_MS": 600000,
+    "EVENT_CHANCE": 0.15,
+    "STAGE_XP": [3, 200, 800, 2500, 8000],
+    "INITIAL_FISH": 100
+  },
+  "breeds": {
+    "koshort": {
+      "name": "코리안 숏헤어",
+      "weight": 30,
+      "emoji": "🐱",
+      "personality": { "curiosity": [40,70], "affection": [40,70], "mischief": [30,60], "bravery": [40,70], "laziness": [20,50] },
+      "desc": "한국 대표 고양이. 균형 잡힌 성격의 만능형!"
+    },
+    "russian": {
+      "name": "러시안 블루",
+      "weight": 15,
+      "emoji": "🐈",
+      "personality": { "curiosity": [30,60], "affection": [60,90], "mischief": [10,40], "bravery": [30,60], "laziness": [30,60] },
+      "desc": "우아하고 다정한 은빛 귀족."
+    },
+    "persian": {
+      "name": "페르시안",
+      "weight": 12,
+      "emoji": "🐱",
+      "personality": { "curiosity": [20,50], "affection": [50,80], "mischief": [10,30], "bravery": [15,45], "laziness": [60,90] },
+      "desc": "느긋한 럭셔리 고양이. 고급 음식을 좋아해요."
+    },
+    "siamese": {
+      "name": "샴",
+      "weight": 12,
+      "emoji": "🐈",
+      "personality": { "curiosity": [60,90], "affection": [40,70], "mischief": [50,80], "bravery": [40,70], "laziness": [10,40] },
+      "desc": "호기심 폭발! 말이 많고 장난을 좋아해요."
+    },
+    "munchkin": {
+      "name": "먼치킨",
+      "weight": 10,
+      "emoji": "🐱",
+      "personality": { "curiosity": [50,80], "affection": [60,90], "mischief": [30,60], "bravery": [30,60], "laziness": [20,50] },
+      "desc": "짧은 다리의 귀요미. 모험 속도 보너스!"
+    },
+    "bengal": {
+      "name": "뱅갈",
+      "weight": 8,
+      "emoji": "🐆",
+      "personality": { "curiosity": [60,90], "affection": [30,60], "mischief": [40,70], "bravery": [70,95], "laziness": [5,30] },
+      "desc": "야생의 피가 흐르는 모험가. 전리품 보너스!"
+    },
+    "scottish": {
+      "name": "스코티시 폴드",
+      "weight": 8,
+      "emoji": "🐱",
+      "personality": { "curiosity": [40,70], "affection": [50,80], "mischief": [20,50], "bravery": [40,70], "laziness": [30,60] },
+      "desc": "접힌 귀의 매력. 신뢰도가 빨리 올라요."
+    },
+    "angora": {
+      "name": "터키시 앙고라",
+      "weight": 5,
+      "emoji": "🐈",
+      "personality": { "curiosity": [50,85], "affection": [50,85], "mischief": [30,65], "bravery": [50,85], "laziness": [10,40] },
+      "desc": "희귀한 하얀 요정. 비밀 진화의 열쇠?"
+    }
+  },
+  "furPatterns": [
+    { "id": "tabby", "name": "줄무늬", "emoji": "🟤" },
+    { "id": "solid", "name": "단색", "emoji": "⬛" },
+    { "id": "bicolor", "name": "얼룩", "emoji": "⬜" },
+    { "id": "calico", "name": "삼색", "emoji": "🟠" },
+    { "id": "tuxedo", "name": "턱시도", "emoji": "🖤" },
+    { "id": "smoke", "name": "스모크", "emoji": "🩶" },
+    { "id": "point", "name": "포인트", "emoji": "🤎" }
+  ],
+  "eyeColors": [
+    { "id": "green", "name": "초록", "emoji": "💚" },
+    { "id": "gold", "name": "금색", "emoji": "💛" },
+    { "id": "blue", "name": "파랑", "emoji": "💙" },
+    { "id": "copper", "name": "구리색", "emoji": "🧡" },
+    { "id": "odd", "name": "오드아이", "emoji": "💙💛" }
+  ],
+  "traits": [
+    { "id": "vocal", "name": "야옹거림", "desc": "자주 울어서 가끔 이웃이 선물을 줘요", "effect": "event_bonus" },
+    { "id": "climber", "name": "높은곳좋아함", "desc": "높은 곳 모험을 잘 해요", "effect": "adventure_height" },
+    { "id": "hunter", "name": "사냥본능", "desc": "모험에서 전리품을 더 잘 찾아요", "effect": "loot_bonus" },
+    { "id": "cuddler", "name": "껴안기좋아함", "desc": "놀아주면 신뢰도가 더 올라요", "effect": "trust_play" },
+    { "id": "picky", "name": "까다로운입맛", "desc": "싼 음식은 싫어하지만 비싼 음식 효과 UP", "effect": "food_picky" },
+    { "id": "nightowl", "name": "야행성", "desc": "밤 모험(22시~6시)에 보너스", "effect": "night_bonus" },
+    { "id": "lucky", "name": "행운아", "desc": "이벤트에서 좋은 결과 확률 UP", "effect": "luck" },
+    { "id": "lazy_sleeper", "name": "잠꾸러기", "desc": "수면 시 에너지 회복이 2배", "effect": "sleep_bonus" },
+    { "id": "foodie", "name": "먹보", "desc": "모든 음식의 배고픔 회복 +5", "effect": "food_bonus" },
+    { "id": "adventurer", "name": "탐험가기질", "desc": "모험 시간이 10% 단축", "effect": "adventure_speed" },
+    { "id": "charmer", "name": "매력쟁이", "desc": "소셜 인사 시 우정이 더 빨리 쌓여요", "effect": "social_bonus" },
+    { "id": "tough", "name": "터프가이", "desc": "부정적 이벤트 피해 감소", "effect": "event_resist" },
+    { "id": "dreamer", "name": "몽상가", "desc": "꿈에서 보상이 2배", "effect": "dream_bonus" },
+    { "id": "collector", "name": "수집가", "desc": "보물 발견 확률 UP", "effect": "treasure_bonus" },
+    { "id": "healer", "name": "자가치유", "desc": "건강이 시간이 지나면 천천히 회복", "effect": "health_regen" }
+  ],
+  "foods": {
+    "건사료": { "cost": 10, "hunger": 15, "happiness": -5, "energy": 0, "trust": 0, "desc": "기본 사료. 까다로운 고양이는 싫어해요." },
+    "참치캔": { "cost": 20, "hunger": 25, "happiness": 5, "energy": 0, "trust": 0, "desc": "고양이의 영원한 친구." },
+    "우유": { "cost": 15, "hunger": 10, "happiness": 15, "energy": 0, "trust": 0, "desc": "맛있지만 배탈 확률 20%!", "sickChance": 0.2, "sickDamage": 5 },
+    "닭가슴살": { "cost": 40, "hunger": 30, "happiness": 10, "energy": 15, "trust": 0, "desc": "모험 전 에너지 충전!" },
+    "츄르": { "cost": 50, "hunger": 15, "happiness": 30, "energy": 0, "trust": 5, "desc": "최고의 간식. 신뢰도 UP!" },
+    "회": { "cost": 80, "hunger": 40, "happiness": 20, "energy": 0, "trust": 3, "desc": "눈이 초롱초롱! 프리미엄." },
+    "고급캔": { "cost": 60, "hunger": 35, "happiness": 15, "energy": 0, "trust": 2, "desc": "성장 경험치 보너스!", "bonusXP": 5 }
+  },
+  "plays": {
+    "실뭉치": { "cost": 0, "happiness": 15, "energy": -10, "trust": 1, "desc": "기본 놀이." },
+    "숨바꼭질": { "cost": 0, "happiness": 20, "energy": -15, "trust": 2, "desc": "호기심 높은 고양이가 더 좋아해요.", "personalityBonus": "curiosity" },
+    "레이저포인터": { "cost": 0, "happiness": 25, "energy": -20, "trust": 1, "desc": "격렬한 놀이! 에너지 많이 필요.", "personalityBonus": "bravery" },
+    "깃털낚시": { "cost": 0, "happiness": 30, "energy": -15, "trust": 2, "desc": "장난꾸러기가 특히 좋아해요.", "personalityBonus": "mischief", "requireItem": true },
+    "캣닢인형": { "cost": 0, "happiness": 25, "energy": -5, "trust": 1, "desc": "기분 좋아지지만 30분간 몽롱해져요.", "requireItem": true, "dazeDurationMs": 1800000 },
+    "골판지상자": { "cost": 0, "happiness": 20, "energy": -5, "trust": 2, "desc": "고양이는 상자를 사랑해요.", "requireItem": true, "personalityBonus": "curiosity" }
+  },
+  "dreams": [
+    { "text": "{name}(이)가 거대한 참치를 타고 바다를 건너는 꿈을 꿨어요! 🐟🌊", "stat": "happiness", "value": 10, "coins": 5, "weight": 10 },
+    { "text": "{name}(이)가 하늘을 나는 꿈을 꿨어요! 날개가 달린 고양이라니! 🦋", "stat": "happiness", "value": 12, "coins": 8, "weight": 8 },
+    { "text": "{name}(이)가 캣닢 밭에서 뒹구는 꿈을 꿨어요... 행복해 보여요 😊", "stat": "happiness", "value": 15, "coins": 3, "weight": 12 },
+    { "text": "{name}(이)가 생쥐를 쫓다가 치즈나라에 도착한 꿈을 꿨어요! 🧀", "stat": "energy", "value": 10, "coins": 10, "weight": 8 },
+    { "text": "{name}(이)가 구름 위에서 낮잠 자는 꿈을 꿨어요 ☁️ 푹 잤대요!", "stat": "energy", "value": 20, "coins": 3, "weight": 10 },
+    { "text": "{name}(이)가 무서운 개에게 쫓기는 악몽을 꿨어요... 😰", "stat": "happiness", "value": -5, "coins": 0, "weight": 5, "personalityWeight": "bravery_low" },
+    { "text": "{name}(이)가 주인이 안아주는 꿈을 꿨대요. 눈을 떠서 아쉬워했어요 💕", "stat": "trust", "value": 3, "coins": 0, "weight": 8, "personalityWeight": "affection_high" },
+    { "text": "{name}(이)가 빛나는 동굴을 발견하는 꿈을 꿨어요... 어딘가에 있을까? ✨", "stat": "happiness", "value": 8, "coins": 5, "weight": 5, "hint": "secret_cave" },
+    { "text": "{name}(이)가 다른 고양이들과 파티하는 꿈을 꿨어요! 🎉", "stat": "happiness", "value": 12, "coins": 8, "weight": 7 },
+    { "text": "{name}(이)가 집사의 신발 속에서 자는 꿈을 꿨어요 👟 따뜻했대요~", "stat": "trust", "value": 2, "coins": 2, "weight": 10 },
+    { "text": "{name}(이)가 슈퍼 히어로가 되어 동네를 지키는 꿈을 꿨어요! 🦸", "stat": "happiness", "value": 10, "coins": 12, "weight": 6, "personalityWeight": "bravery_high" },
+    { "text": "{name}(이)가 요리사가 되어 참치 요리를 하는 꿈을 꿨어요 👨‍🍳", "stat": "hunger", "value": 10, "coins": 5, "weight": 8 },
+    { "text": "{name}(이)가 우주를 여행하는 꿈을 꿨어요! 별이 반짝반짝 🌟", "stat": "happiness", "value": 15, "coins": 15, "weight": 4, "personalityWeight": "curiosity_high" },
+    { "text": "{name}(이)가 따뜻한 이불 속에서 뒹굴뒹굴 하는 꿈을 꿨어요 🛏️", "stat": "energy", "value": 15, "coins": 2, "weight": 12, "personalityWeight": "laziness_high" },
+    { "text": "{name}(이)가 낙엽을 쫓아다니는 꿈을 꿨어요 🍂 즐거웠대요!", "stat": "happiness", "value": 8, "coins": 3, "weight": 10 },
+    { "text": "{name}(이)가 어항 속 물고기와 대화하는 꿈을 꿨어요 🐠", "stat": "happiness", "value": 10, "coins": 7, "weight": 7 },
+    { "text": "{name}(이)가 동네 대장 고양이가 되는 꿈을 꿨어요! 👑", "stat": "happiness", "value": 12, "coins": 10, "weight": 5, "personalityWeight": "mischief_high" },
+    { "text": "{name}(이)가 피아노 건반 위를 걷는 꿈을 꿨어요 🎹 음악이 흘렀대요!", "stat": "happiness", "value": 10, "coins": 5, "weight": 8 },
+    { "text": "{name}(이)가 눈밭에서 발자국을 남기는 꿈을 꿨어요 ❄️", "stat": "happiness", "value": 8, "coins": 3, "weight": 9 },
+    { "text": "{name}(이)가 박스 미로를 탐험하는 꿈을 꿨어요 📦 출구를 찾았대요!", "stat": "happiness", "value": 10, "coins": 8, "weight": 7, "personalityWeight": "curiosity_high" },
+    { "text": "{name}(이)가 무지개를 타고 내려오는 꿈을 꿨어요 🌈", "stat": "happiness", "value": 15, "coins": 10, "weight": 4 },
+    { "text": "{name}(이)가 카페에서 손님들의 사랑을 받는 꿈을 꿨어요 ☕", "stat": "trust", "value": 5, "coins": 5, "weight": 6, "personalityWeight": "affection_high" },
+    { "text": "{name}(이)가 숲 속에서 반딧불이를 쫓는 꿈을 꿨어요 🌙", "stat": "happiness", "value": 10, "coins": 5, "weight": 8 },
+    { "text": "{name}(이)가 꿈에서 황금 물고기를 낚았어요! 🐟✨", "stat": "happiness", "value": 5, "coins": 30, "weight": 3 },
+    { "text": "{name}(이)가 편의점 앞에서 간식을 얻어먹는 꿈을 꿨어요 🏪", "stat": "hunger", "value": 15, "coins": 3, "weight": 9 }
+  ],
+  "stages": [
+    { "name": "알", "emoji": "🥚", "xpReq": 3 },
+    { "name": "아기고양이", "emoji": "🐱", "xpReq": 200 },
+    { "name": "어린고양이", "emoji": "🐱", "xpReq": 800 },
+    { "name": "성묘", "emoji": "🐈", "xpReq": 2500 },
+    { "name": "장로묘", "emoji": "🐈‍⬛", "xpReq": 8000 }
+  ],
+  "adventures": {
+    "backyard": { "name": "뒷마당", "emoji": "🏡", "duration": 1800000, "difficulty": 1, "stageReq": 1, "trustReq": 0, "xp": 10, "coinRange": [15, 35] },
+    "alley": { "name": "동네골목", "emoji": "🏘️", "duration": 3600000, "difficulty": 2, "stageReq": 1, "trustReq": 0, "xp": 15, "coinRange": [25, 50] },
+    "park": { "name": "공원", "emoji": "🌳", "duration": 5400000, "difficulty": 3, "stageReq": 2, "trustReq": 15, "xp": 20, "coinRange": [35, 70] },
+    "market": { "name": "재래시장", "emoji": "🏪", "duration": 7200000, "difficulty": 3, "stageReq": 2, "trustReq": 30, "xp": 25, "coinRange": [50, 90] },
+    "rooftop": { "name": "지붕위", "emoji": "🏢", "duration": 3600000, "difficulty": 3, "stageReq": 2, "trustReq": 20, "xp": 20, "coinRange": [30, 60], "traitReq": "climber" },
+    "forest": { "name": "숲속", "emoji": "🌲", "duration": 9000000, "difficulty": 4, "stageReq": 3, "trustReq": 40, "xp": 30, "coinRange": [60, 120] },
+    "harbor": { "name": "항구", "emoji": "⚓", "duration": 10800000, "difficulty": 4, "stageReq": 3, "trustReq": 50, "xp": 30, "coinRange": [70, 130], "personalityReq": { "bravery": 60 } },
+    "factory": { "name": "버려진공장", "emoji": "🏚️", "duration": 10800000, "difficulty": 5, "stageReq": 3, "trustReq": 50, "xp": 35, "coinRange": [80, 150], "personalityReq": { "curiosity": 70 } },
+    "cave": { "name": "신비한동굴", "emoji": "🕳️", "duration": 14400000, "difficulty": 5, "stageReq": 4, "trustReq": 65, "xp": 40, "coinRange": [100, 200] }
+  },
+  "adventureStories": {
+    "backyard": [
+      "{name}(이)가 뒷마당에서 나비를 쫓다가 화분을 넘어뜨렸어요! 🦋",
+      "{name}(이)가 뒷마당 풀숲에서 귀뚜라미를 잡았어요! 🦗",
+      "{name}(이)가 뒷마당 울타리 위에서 동네를 내려다봤어요! 🏡",
+      "{name}(이)가 이웃집 고양이와 눈싸움을 했어요... 이겼대요! 👀"
+    ],
+    "alley": [
+      "{name}(이)가 골목에서 빈 참치캔을 발견했어요! 🐟",
+      "{name}(이)가 골목 고양이들과 어울렸어요. 새 친구! 🐱",
+      "{name}(이)가 쓰레기통 뒤에서 반짝이는 걸 찾았어요! ✨",
+      "{name}(이)가 골목 끝 비밀 통로를 발견했어요! 🚪"
+    ],
+    "park": [
+      "{name}(이)가 공원 분수대에서 물장난을 쳤어요! 💦",
+      "{name}(이)가 비둘기떼를 흩어놓고 의기양양했어요! 🕊️",
+      "{name}(이)가 벤치 아래에서 할머니에게 간식을 얻었어요! 🍖",
+      "{name}(이)가 나무 위에 올라갔다가... 내려오는 건 어려웠어요 🌳😅"
+    ],
+    "market": [
+      "{name}(이)가 생선 가게 아저씨에게 참치를 얻었어요! 🐟",
+      "{name}(이)가 시장 미로를 누비며 구경했어요! 🏪",
+      "{name}(이)가 떡볶이 냄새를 맡고 따라갔다가 길을 잃었어요... 그래도 돌아왔어요! 😸"
+    ]
+  },
+  "shopItems": {
+    "깃털낚시": { "cost": 80, "type": "toy", "desc": "놀기 옵션 추가! 장난꾸러기가 좋아해요." },
+    "캣닢인형": { "cost": 60, "type": "toy", "desc": "놀기 옵션 추가! 기분 UP, 잠시 몽롱." },
+    "골판지상자": { "cost": 40, "type": "toy", "desc": "놀기 옵션 추가! 호기심쟁이가 좋아해요." },
+    "약": { "cost": 200, "type": "medicine", "desc": "아픈 고양이를 치료해요. 건강 +50." },
+    "에너지드링크": { "cost": 100, "type": "energy", "desc": "에너지 즉시 +50!" },
+    "리본": { "cost": 150, "type": "outfit", "desc": "귀여운 리본 👗" },
+    "산타모자": { "cost": 300, "type": "outfit", "desc": "메리 크리스냥! 🎅" },
+    "선글라스": { "cost": 200, "type": "outfit", "desc": "쿨한 선글라스 😎" },
+    "왕관": { "cost": 500, "type": "outfit", "desc": "고양이 왕/여왕! 👑" },
+    "망토": { "cost": 400, "type": "outfit", "desc": "슈퍼 히어로냥! 🦸" }
+  }
+}

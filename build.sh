@@ -21,6 +21,8 @@ cat \
   src/data/mine_db.js \
   src/features/mine.js \
   src/features/cgv.js \
+  src/data/cat_db.js \
+  src/features/cat.js \
   src/core/router.js \
   > "$OUTPUT" 2>/dev/null
 

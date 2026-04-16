@@ -120,7 +120,9 @@ function handleHelp(room, msg, sender, replier) {
     "⛏️ ㄱㅅ등록 [이름] — 광산 게임 시작\n" +
     "⛏️ ㄱㅅ도움말 — 광산 명령어 보기\n\n" +
     "🎬 CGV등록 영화 날짜 — 상영 감시 등록\n" +
-    "🎬 CGV도움말 — CGV 명령어 보기"
+    "🎬 CGV도움말 — CGV 명령어 보기\n\n" +
+    "🐱 ㄴㄴㅇ등록 [이름] — 고양이 키우기\n" +
+    "🐱 ㄴㄴㄷ — 냥냥이 도움말"
   );
 }
 
@@ -184,6 +186,9 @@ function _response(room, msg, sender, isGroupChat, replier, imageDB, packageName
   }
   if (typeof CGV_COMMANDS !== "undefined") {
     allCommands = allCommands.concat(CGV_COMMANDS);
+  }
+  if (typeof CAT_COMMANDS !== "undefined") {
+    allCommands = allCommands.concat(CAT_COMMANDS);
   }
   for (var i = 0; i < allCommands.length; i++) {
     var cmd = allCommands[i];
