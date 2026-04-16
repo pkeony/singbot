@@ -1,4 +1,4 @@
-name: CGV IMAX 체크
+name: CGV 용아맥 상영 알림
 
 on:
   schedule:
@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install dependencies
+      - name: Install puppeteer
         working-directory: cgv-alert
         run: npm install puppeteer
 
