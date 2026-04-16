@@ -58,7 +58,7 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
       var code = fetchText(GITHUB_RAW_URL);
       _cachedCode = code;
       _lastFetchTime = Date.now();
-      eval(code);
+      (1, eval)(code);
       replier.reply("[ 싱봇 ] 최신 코드로 업데이트 완료!");
     } catch (e) {
       replier.reply("[ 싱봇 ] 업데이트 실패: " + e);
