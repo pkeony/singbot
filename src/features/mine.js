@@ -602,7 +602,7 @@ function handleGamble(room, msg, sender, replier) {
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
   ensureNewFields(account);
 
-  var args = msg.replace(/^(광산|ㄱㅅ|ㄳ)도박\s*/, "").trim().split(/\s+/);
+  var args = msg.replace(/^((광산|ㄱㅅ|ㄳ)도박|ㄷㅂ)\s*/, "").trim().split(/\s+/);
   var amount = parseInt(args[0]);
   var choice = args[1] || null;
 
@@ -1344,7 +1344,7 @@ function handleMineBuy(room, msg, sender, replier) {
     return;
   }
 
-  var itemName = msg.replace(/^(광산|ㄱㅅ|ㄳ)구매\s*/, "").trim();
+  var itemName = msg.replace(/^((광산|ㄱㅅ|ㄳ)구매|ㄳㅅ)\s*/, "").trim();
   if (!itemName) {
     replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ구매 [아이템명]\n예) ㄱㅅ구매 에너지 음료");
     return;
@@ -1399,7 +1399,7 @@ function handleMineSell(room, msg, sender, replier) {
     return;
   }
 
-  var input = msg.replace(/^(광산|ㄱㅅ|ㄳ)판매\s*/, "").trim();
+  var input = msg.replace(/^((광산|ㄱㅅ|ㄳ)판매|ㄳㅍ)\s*/, "").trim();
   if (!input) {
     replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ판매 [자원명] [수량]\n예) ㄱㅅ판매 돌 10\n전부 판매: ㄱㅅ판매 돌 전부");
     return;
@@ -1590,7 +1590,7 @@ function handleMineCraft(room, msg, sender, replier) {
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
   ensureEquipment(account);
 
-  var input = msg.replace(/^(광산|ㄱㅅ|ㄳ)제작\s*/, "").trim();
+  var input = msg.replace(/^((광산|ㄱㅅ|ㄳ)제작|ㄳㅈㅈ)\s*/, "").trim();
   if (!input) {
     replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ제작 [장비명]\n예) ㄱㅅ제작 가죽 안전모\n\n'ㄱㅅ제작목록'으로 목록 확인");
     return;
@@ -1661,7 +1661,7 @@ function handleMineUnequip(room, msg, sender, replier) {
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
   ensureEquipment(account);
 
-  var input = msg.replace(/^(광산|ㄱㅅ|ㄳ)해제\s*/, "").trim();
+  var input = msg.replace(/^((광산|ㄱㅅ|ㄳ)해제|ㄳㅎㅈ)\s*/, "").trim();
   var slotMap = { "안전모": "helmet", "헬멧": "helmet", "램프": "lamp", "장화": "boots" };
   var slot = slotMap[input];
 
@@ -1970,7 +1970,7 @@ function handleMineMarketSell(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
 
-  var input = msg.replace(/^(광산|ㄱㅅ|ㄳ)시장판매\s*/, "").trim();
+  var input = msg.replace(/^((광산|ㄱㅅ|ㄳ)시장판매|ㅅㅈㅍ)\s*/, "").trim();
   if (!input) {
     replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ시장판매 [자원명] [수량]\n예) ㄱㅅ시장판매 금광석 5\n전부: ㄱㅅ시장판매 금광석 전부");
     return;
@@ -2118,7 +2118,7 @@ function handleMinePrestigeBuy(room, msg, sender, replier) {
   var account = loadMineAccount(sender);
   if (!account) { replier.reply("[ 싱봇 광산 ] 먼저 'ㄱㅅ등록 [이름]'으로 등록하세요!"); return; }
 
-  var input = msg.replace(/^(광산|ㄱㅅ|ㄳ)환생구매\s*/, "").trim();
+  var input = msg.replace(/^((광산|ㄱㅅ|ㄳ)환생구매)\s*/, "").trim();
   if (!input) {
     replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ환생구매 [보너스명]\n예) ㄱㅅ환생구매 채굴 효율");
     return;
@@ -2190,7 +2190,7 @@ function handleMineDuel(room, msg, sender, replier) {
     return;
   }
 
-  var input = msg.replace(/^(광산|ㄱㅅ|ㄳ)대결\s*/, "").trim();
+  var input = msg.replace(/^((광산|ㄱㅅ|ㄳ)대결|ㅂㅌ)\s*/, "").trim();
   if (!input) {
     replier.reply("[ 싱봇 광산 ] 사용법: ㄱㅅ대결 [상대 광부이름]");
     return;
