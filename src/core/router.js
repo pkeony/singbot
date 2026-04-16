@@ -149,6 +149,15 @@ var CONTEXT_COMMANDS = [
 function _response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
   var trimmed = msg.trim();
 
+  // 0. CGV 자동 알림 체크 (2분마다 최대 1회)
+  if (typeof checkCgvAutoAlert === "function") {
+    var _now = Date.now();
+    if (!_response._lastCgvCheck || _now - _response._lastCgvCheck > 120000) {
+      _response._lastCgvCheck = _now;
+      try { checkCgvAutoAlert(replier); } catch (e) {}
+    }
+  }
+
   // 1. 퀴즈 진행 중이면 컨텍스트 명령 먼저
   if (roomState[room] && roomState[room].activeQuiz) {
     for (var i = 0; i < CONTEXT_COMMANDS.length; i++) {
