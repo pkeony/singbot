@@ -205,5 +205,131 @@
     "선글라스": { "cost": 200, "type": "outfit", "desc": "쿨한 선글라스 😎" },
     "왕관": { "cost": 500, "type": "outfit", "desc": "고양이 왕/여왕! 👑" },
     "망토": { "cost": 400, "type": "outfit", "desc": "슈퍼 히어로냥! 🦸" }
-  }
+  },
+  "tricks": {
+    "sit": { "name": "앉아", "tier": 1, "trustReq": 10, "energyCost": 15, "baseRate": 0.7, "xp": 10, "desc": "기본 중의 기본!", "requires": [], "reward": { "trust": 2 } },
+    "paw": { "name": "손", "tier": 1, "trustReq": 15, "energyCost": 15, "baseRate": 0.65, "xp": 10, "desc": "귀여운 악수!", "requires": [], "reward": { "trust": 2 } },
+    "roll": { "name": "구르기", "tier": 1, "trustReq": 20, "energyCost": 20, "baseRate": 0.55, "xp": 15, "desc": "데굴데굴~", "requires": [], "reward": { "trust": 3 }, "personalityBonus": "affection" },
+    "highfive": { "name": "하이파이브", "tier": 2, "trustReq": 30, "energyCost": 20, "baseRate": 0.50, "xp": 20, "desc": "✋ 찰싹!", "requires": ["sit", "paw"], "reward": { "trust": 3, "happiness": 5 } },
+    "jump": { "name": "점프", "tier": 2, "trustReq": 25, "energyCost": 25, "baseRate": 0.45, "xp": 20, "desc": "높이 뛰어!", "requires": ["sit"], "reward": { "trust": 3 }, "personalityBonus": "bravery" },
+    "fetch": { "name": "가져오기", "tier": 2, "trustReq": 35, "energyCost": 25, "baseRate": 0.40, "xp": 25, "desc": "던지면 물어와요!", "requires": ["paw", "roll"], "reward": { "trust": 4, "coins": 10 }, "personalityBonus": "curiosity" },
+    "deadplay": { "name": "죽은척", "tier": 3, "trustReq": 50, "energyCost": 25, "baseRate": 0.35, "xp": 30, "desc": "아카데미상감!", "requires": ["highfive", "roll"], "reward": { "trust": 5, "happiness": 10 }, "personalityBonus": "affection" },
+    "dooropen": { "name": "문열기", "tier": 3, "trustReq": 45, "energyCost": 30, "baseRate": 0.30, "xp": 35, "desc": "비밀 장소 해금!", "requires": ["jump", "fetch"], "reward": { "trust": 5 }, "personalityBonus": "mischief", "unlocks": "secret_location" },
+    "delivery": { "name": "배달부", "tier": 3, "trustReq": 60, "energyCost": 30, "baseRate": 0.25, "xp": 40, "desc": "패시브 수입 해금!", "requires": ["fetch"], "reward": { "trust": 5, "coins": 30 }, "passive": { "coinsPerHour": 5 } },
+    "speak": { "name": "말하기", "tier": 4, "trustReq": 80, "energyCost": 35, "baseRate": 0.20, "xp": 50, "desc": "냥~이 아니라 말을!", "requires": ["deadplay", "dooropen"], "reward": { "trust": 8, "starDust": 1 } },
+    "treasure_hunt": { "name": "보물찾기", "tier": 4, "trustReq": 75, "energyCost": 35, "baseRate": 0.20, "xp": 50, "desc": "모험 전리품 2배!", "requires": ["delivery", "dooropen"], "reward": { "trust": 8, "starDust": 1 }, "personalityBonus": "curiosity", "adventureBonus": 2.0 }
+  },
+  "events": {
+    "positive": [
+      { "text": "이웃이 {name}에게 간식을 줬어요! 🍖", "hunger": 15, "happiness": 10, "coins": 0 },
+      { "text": "{name}(이)가 소파 밑에서 동전을 찾았어요! 💰", "hunger": 0, "happiness": 5, "coins": 30 },
+      { "text": "창밖에 새가 와서 {name}(이)가 신나했어요! 🐦", "hunger": 0, "happiness": 15, "coins": 0 },
+      { "text": "{name}(이)가 방석에 쪽쪽이를 했어요! 💕", "hunger": 0, "happiness": 15, "trust": 3, "coins": 0 },
+      { "text": "{name}(이)가 햇살 아래서 기분좋게 늘어났어요! ☀️", "hunger": 0, "happiness": 10, "energy": 10, "coins": 0 },
+      { "text": "택배 상자가 왔어요! {name}(이)가 점령했습니다 📦", "hunger": 0, "happiness": 20, "coins": 0 },
+      { "text": "{name}(이)가 장난감 쥐를 사냥했어요! 사냥 본능! 🐭", "hunger": 0, "happiness": 10, "coins": 15 }
+    ],
+    "negative": [
+      { "text": "{name}(이)가 화분을 깨뜨렸어요! 🪴💥", "happiness": -10, "mischief_up": 2 },
+      { "text": "{name}(이)가 비를 맞고 돌아왔어요... 🌧️", "health": -5, "happiness": -5 },
+      { "text": "동네 고양이가 {name}을(를) 위협했어요! 😾", "happiness": -10, "braveryCheck": true },
+      { "text": "{name}(이)가 실을 삼켰어요! 아슬아슬... 🧶😰", "health": -8, "happiness": -5 },
+      { "text": "{name}(이)가 커튼을 찢었어요! 😼", "happiness": -5, "mischief_up": 3 }
+    ],
+    "branching": [
+      {
+        "text": "길고양이 한 마리가 {name}에게 다가오고 있어요! 🐱",
+        "options": [
+          { "label": "지켜본다", "desc": "사회성 향상?", "outcomes": {
+            "highAffection": { "text": "친구가 됐어요! 🤝", "happiness": 20, "trust": 3, "makeFriend": true },
+            "highBravery": { "text": "{name}(이)가 당당하게 맞섰어요! 💪", "happiness": 10, "trust": 2 },
+            "default": { "text": "서로 냄새를 맡고 헤어졌어요. 😐", "happiness": 5, "trust": 1 }
+          }},
+          { "label": "쫓아낸다", "desc": "나비를 보호", "outcomes": {
+            "default": { "text": "집사가 지켜줬어요! {name}(이)가 안심했어요 💕", "happiness": 5, "trust": 5 }
+          }}
+        ],
+        "timeout": 180000
+      },
+      {
+        "text": "반짝이는 물건이 높은 선반 위에 있어요! ✨",
+        "options": [
+          { "label": "올라가게 한다", "desc": "위험하지만 보상?", "outcomes": {
+            "highBravery": { "text": "성공! 반짝이는 구슬을 찾았어요! 🔮", "happiness": 15, "coins": 50 },
+            "default": { "text": "올라갔다가 미끄러졌어요! 😰", "happiness": -5, "health": -3 }
+          }},
+          { "label": "말린다", "desc": "안전하게", "outcomes": {
+            "default": { "text": "아쉽지만 안전이 최고! 🛡️", "happiness": 3, "trust": 3 }
+          }}
+        ],
+        "timeout": 180000
+      },
+      {
+        "text": "이웃집 아이가 {name}을(를) 만지고 싶어해요! 👧",
+        "options": [
+          { "label": "만지게 해준다", "desc": "사교성 UP", "outcomes": {
+            "highAffection": { "text": "{name}(이)가 그르릉거리며 좋아했어요! 👧💕", "happiness": 20, "trust": 2, "coins": 20 },
+            "default": { "text": "{name}(이)가 쓰다듬을 받고 어색해했어요 😅", "happiness": 5, "trust": 1 }
+          }},
+          { "label": "거절한다", "desc": "스트레스 방지", "outcomes": {
+            "default": { "text": "조용한 게 좋아! 🤫", "happiness": 5, "trust": 2 }
+          }}
+        ],
+        "timeout": 180000
+      },
+      {
+        "text": "{name}(이)가 열린 창문 밖을 보고 있어요! 🪟",
+        "options": [
+          { "label": "나가게 해준다", "desc": "짧은 산책?", "outcomes": {
+            "highCuriosity": { "text": "잠깐 나갔다 신나서 돌아왔어요! 🌿", "happiness": 25, "energy": -15, "coins": 15 },
+            "default": { "text": "나갔다가 바로 돌아왔어요. 밖은 무서워! 😨", "happiness": -5, "bravery_up": 3 }
+          }},
+          { "label": "창문을 닫는다", "desc": "안전 우선", "outcomes": {
+            "default": { "text": "아쉬운 눈빛... 하지만 안전해요! 🏠", "happiness": -3, "trust": 2 }
+          }}
+        ],
+        "timeout": 180000
+      }
+    ]
+  },
+  "dailyQuestPool": [
+    { "desc": "밥 2번 주기", "type": "feed", "target": 2, "reward": 40 },
+    { "desc": "밥 3번 주기", "type": "feed", "target": 3, "reward": 60 },
+    { "desc": "놀아주기 2번", "type": "play", "target": 2, "reward": 40 },
+    { "desc": "놀아주기 3번", "type": "play", "target": 3, "reward": 60 },
+    { "desc": "모험 1번 보내기", "type": "adventure", "target": 1, "reward": 50 },
+    { "desc": "훈련 성공 1회", "type": "train", "target": 1, "reward": 60 },
+    { "desc": "훈련 2회 시도", "type": "trainAttempt", "target": 2, "reward": 50 },
+    { "desc": "쓰다듬기 3번", "type": "care", "target": 3, "reward": 30 },
+    { "desc": "상점에서 구매 1회", "type": "buy", "target": 1, "reward": 30 },
+    { "desc": "츄르 먹이기", "type": "feedSpecific", "target": "츄르", "reward": 40 }
+  ],
+  "achievements": [
+    { "id": "first_hatch", "name": "🐣 첫 부화", "desc": "고양이를 처음 부화시켰어요!", "coins": 50 },
+    { "id": "first_feed", "name": "🍖 첫 집사", "desc": "처음으로 밥을 줬어요!", "coins": 30 },
+    { "id": "first_play", "name": "🧶 첫 놀이", "desc": "처음으로 놀아줬어요!", "coins": 30 },
+    { "id": "first_adventure", "name": "🗺️ 첫 모험", "desc": "첫 모험을 보냈어요!", "coins": 50 },
+    { "id": "first_trick", "name": "🎓 첫 기술", "desc": "기술을 처음 배웠어요!", "coins": 50 },
+    { "id": "feed_10", "name": "🍖 밥친구", "desc": "총 10번 밥을 줬어요!", "coins": 50 },
+    { "id": "feed_50", "name": "🍖 먹이킹", "desc": "총 50번 밥을 줬어요!", "coins": 150, "starDust": 1 },
+    { "id": "play_10", "name": "🧶 놀이친구", "desc": "총 10번 놀아줬어요!", "coins": 50 },
+    { "id": "play_50", "name": "🧶 놀이왕", "desc": "총 50번 놀아줬어요!", "coins": 150, "starDust": 1 },
+    { "id": "adventure_10", "name": "🗺️ 초보탐험가", "desc": "모험 10회 완료!", "coins": 100 },
+    { "id": "adventure_25", "name": "🗺️ 숙련탐험가", "desc": "모험 25회 완료!", "coins": 200, "starDust": 1 },
+    { "id": "adventure_50", "name": "🗺️ 전설탐험가", "desc": "모험 50회 완료!", "coins": 500, "starDust": 3 },
+    { "id": "trust_30", "name": "💕 친해지기", "desc": "신뢰도 30 달성!", "coins": 50 },
+    { "id": "trust_60", "name": "💕 절친", "desc": "신뢰도 60 달성!", "coins": 100 },
+    { "id": "trust_90", "name": "💕 영혼의 짝", "desc": "신뢰도 90 달성!", "coins": 300, "starDust": 2 },
+    { "id": "streak_7", "name": "🔥 일주일", "desc": "7일 연속 출석!", "coins": 150 },
+    { "id": "streak_14", "name": "🔥 2주", "desc": "14일 연속 출석!", "coins": 300 },
+    { "id": "streak_30", "name": "🔥 한달", "desc": "30일 연속 출석!", "coins": 500, "starDust": 5, "title": "집사의 정석" },
+    { "id": "stage_2", "name": "🐱 어린고양이", "desc": "Stage 2 달성!", "coins": 100 },
+    { "id": "stage_3", "name": "🐈 성묘", "desc": "Stage 3 달성!", "coins": 200, "starDust": 1 },
+    { "id": "stage_4", "name": "🐈‍⬛ 장로묘", "desc": "Stage 4 달성!", "coins": 500, "starDust": 3 },
+    { "id": "tricks_3", "name": "🎓 재주꾼", "desc": "기술 3개 습득!", "coins": 100 },
+    { "id": "tricks_6", "name": "🎓 만능묘", "desc": "기술 6개 습득!", "coins": 200, "starDust": 1 },
+    { "id": "tricks_all", "name": "🎓 천재냥", "desc": "모든 기술 습득!", "coins": 1000, "starDust": 5, "title": "천재 고양이" },
+    { "id": "coins_1000", "name": "💰 부자냥", "desc": "물고기코인 1000 보유!", "coins": 100 },
+    { "id": "all_locations", "name": "🗺️ 세계일주", "desc": "모든 장소 방문!", "coins": 300, "starDust": 2, "title": "탐험왕" }
+  ]
 }

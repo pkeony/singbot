@@ -686,7 +686,15 @@ function handleCatFeed(room, msg, sender, replier) {
   account.totalInteractions++;
   account.lastInteractTime = Date.now();
 
+  // 퀘스트 진행
+  generateDailyQuests(account);
+  updateCatQuestProgress(account, "feed", foodName);
+
   var stageUp = checkCatStageUp(account);
+  var newAchievements = checkCatAchievements(account);
+
+  // 랜덤 이벤트
+  var eventMsg = rollCatEvent(account, sender);
   saveCatAccount(sender, account);
 
   var text = "[ 싱봇 냥냥이 ] 🍖 밥 주기\n━━━━━━━━━━━━━━━━━━\n";
@@ -700,6 +708,8 @@ function handleCatFeed(room, msg, sender, replier) {
   if (sickMsg) text += sickMsg;
   if (bonusXP > 0) text += "\n⬆️ 보너스 XP +" + bonusXP;
   if (stageUp) text += "\n\n🎉 성장! " + stageUp.emoji + " " + stageUp.name + "이(가) 되었어요!";
+  text += formatAchievementUnlocks(newAchievements);
+  if (eventMsg) text += "\n\n" + eventMsg;
   text += "\n\n(오늘 " + account.dailyActions.fed + "/" + getCatData().config.MAX_DAILY_FEED + ")";
   replier.reply(text);
 }
@@ -782,6 +792,9 @@ function handleCatPlay(room, msg, sender, replier) {
   account.totalInteractions++;
   account.lastInteractTime = Date.now();
 
+  generateDailyQuests(account);
+  updateCatQuestProgress(account, "play");
+
   var reactions = [
     account.name + "(이)가 " + playName + "(으)로 신나게 놀았어요! 😸",
     account.name + "(이)가 " + playName + "에 푹 빠졌어요! 🐾",
@@ -790,6 +803,8 @@ function handleCatPlay(room, msg, sender, replier) {
   ];
 
   var stageUp = checkCatStageUp(account);
+  var newAchievements = checkCatAchievements(account);
+  var eventMsg = rollCatEvent(account, sender);
   saveCatAccount(sender, account);
 
   var text = "[ 싱봇 냥냥이 ] 🧶 놀기\n━━━━━━━━━━━━━━━━━━\n";
@@ -799,6 +814,8 @@ function handleCatPlay(room, msg, sender, replier) {
   text += "⚡ 에너지 " + (play.energy || 0) + " → " + account.energy + "\n";
   if (trustGain > 0) text += "💕 신뢰 +" + trustGain + " → " + account.trust + "\n";
   if (stageUp) text += "\n🎉 성장! " + stageUp.emoji + " " + stageUp.name + "이(가) 되었어요!";
+  text += formatAchievementUnlocks(newAchievements);
+  if (eventMsg) text += "\n\n" + eventMsg;
   text += "\n\n(오늘 " + account.dailyActions.played + "/" + data.config.MAX_DAILY_PLAY + ")";
   replier.reply(text);
 }
@@ -1024,7 +1041,12 @@ function handleCatAdventureResult(room, msg, sender, replier) {
   account.totalInteractions++;
   account.lastInteractTime = Date.now();
 
+  generateDailyQuests(account);
+  updateCatQuestProgress(account, "adventure");
+
   var stageUp = checkCatStageUp(account);
+  var newAchievements = checkCatAchievements(account);
+  var eventMsg = rollCatEvent(account, sender);
   saveCatAccount(sender, account);
 
   var text = "[ 싱봇 냥냥이 ] 🗺️ 모험 결과!\n━━━━━━━━━━━━━━━━━━\n";
@@ -1036,6 +1058,8 @@ function handleCatAdventureResult(room, msg, sender, replier) {
   text += "  ⬆️ +" + xp + " XP\n";
   text += "  😊 행복 +10 | 💕 신뢰 +2\n";
   if (stageUp) text += "\n🎉 성장! " + stageUp.emoji + " " + stageUp.name + "이(가) 되었어요!";
+  text += formatAchievementUnlocks(newAchievements);
+  if (eventMsg) text += "\n\n" + eventMsg;
   text += "\n\n(총 모험 " + account.adventureCount + "회)";
   replier.reply(text);
 }
@@ -1212,6 +1236,548 @@ function handleCatInventory(room, msg, sender, replier) {
   replier.reply(text);
 }
 
+// === 기술 훈련 시스템 ===
+
+function getCatTrickLevel(account, trickId) {
+  if (!account.trickBook) return 0;
+  for (var i = 0; i < account.trickBook.length; i++) {
+    if (account.trickBook[i].id === trickId) return account.trickBook[i].level || 1;
+  }
+  return 0;
+}
+
+function hasCatTrick(account, trickId) {
+  return getCatTrickLevel(account, trickId) > 0;
+}
+
+function handleCatTrain(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+  if (account.stage === 0) {
+    replier.reply("[ 싱봇 냥냥이 ] 🥚 알은 훈련할 수 없어요!");
+    return;
+  }
+
+  applyCatDecay(account);
+  resetCatDaily(account);
+  var dreamMsg = checkAndGenerateDream(account);
+
+  var data = getCatData();
+  var trickName = msg.replace(/^(냥냥이훈련|ㄴㄴㅇ훈련|ㅎㄹ)\s*/, "").trim();
+
+  if (!trickName) {
+    handleCatTricks(room, msg, sender, replier);
+    return;
+  }
+
+  // 기술 찾기
+  var trickId = null;
+  var trick = null;
+  for (var id in data.tricks) {
+    if (data.tricks[id].name === trickName) {
+      trickId = id;
+      trick = data.tricks[id];
+      break;
+    }
+  }
+  if (!trick) {
+    replier.reply("[ 싱봇 냥냥이 ] '" + trickName + "' 기술을 찾을 수 없어요!\n'ㄴㄴㅇ기술'로 목록을 확인하세요.");
+    return;
+  }
+
+  // 이미 습득?
+  if (hasCatTrick(account, trickId)) {
+    replier.reply("[ 싱봇 냥냥이 ] '" + trickName + "'은(는) 이미 배웠어요! ✅");
+    return;
+  }
+
+  // 일일 제한
+  if (!account.dailyActions.trained) account.dailyActions.trained = 0;
+  if (account.dailyActions.trained >= data.config.MAX_DAILY_TRAIN) {
+    replier.reply("[ 싱봇 냥냥이 ] 오늘은 훈련을 " + data.config.MAX_DAILY_TRAIN + "번 했어요!\n내일 다시 도전! 💪");
+    return;
+  }
+
+  // 선행 기술 체크
+  if (trick.requires && trick.requires.length > 0) {
+    var missing = [];
+    for (var i = 0; i < trick.requires.length; i++) {
+      if (!hasCatTrick(account, trick.requires[i])) {
+        var reqTrick = data.tricks[trick.requires[i]];
+        if (reqTrick) missing.push(reqTrick.name);
+      }
+    }
+    if (missing.length > 0) {
+      replier.reply("[ 싱봇 냥냥이 ] 🔒 선행 기술이 필요해요!\n필요: " + missing.join(", "));
+      return;
+    }
+  }
+
+  // 신뢰도 체크
+  if (account.trust < trick.trustReq) {
+    replier.reply("[ 싱봇 냥냥이 ] 💕 신뢰도가 부족해요!\n필요: " + trick.trustReq + " | 현재: " + account.trust);
+    return;
+  }
+
+  // 에너지 체크
+  if (account.energy < trick.energyCost) {
+    replier.reply("[ 싱봇 냥냥이 ] ⚡ 에너지가 부족해요!\n필요: " + trick.energyCost + " | 현재: " + account.energy);
+    return;
+  }
+
+  account.energy -= trick.energyCost;
+  account.dailyActions.trained++;
+  if (!account.dailyActions.trainAttempt) account.dailyActions.trainAttempt = 0;
+  account.dailyActions.trainAttempt++;
+  account.totalInteractions++;
+  account.lastInteractTime = Date.now();
+
+  // 성공률 계산
+  var rate = trick.baseRate * (1 + account.trust / 200);
+  if (trick.personalityBonus && account.personality[trick.personalityBonus] > 60) {
+    rate += 0.15;
+  }
+  rate = Math.min(0.95, rate);
+
+  var success = Math.random() < rate;
+  var text = "[ 싱봇 냥냥이 ] 🎓 훈련: " + trickName + "\n━━━━━━━━━━━━━━━━━━\n";
+  if (dreamMsg) text += dreamMsg + "\n━━━━━━━━━━━━━━━━━━\n";
+
+  if (success) {
+    // 습득 성공!
+    if (!account.trickBook) account.trickBook = [];
+    account.trickBook.push({ id: trickId, name: trickName, level: 1, masteredAt: Date.now() });
+    account.stageProgress += trick.xp;
+    account.stats.totalTricksLearned = (account.stats.totalTricksLearned || 0) + 1;
+
+    // 보상
+    if (trick.reward) {
+      if (trick.reward.trust) account.trust = Math.min(100, account.trust + trick.reward.trust);
+      if (trick.reward.happiness) account.happiness = Math.min(100, account.happiness + trick.reward.happiness);
+      if (trick.reward.coins) account.fishCoins += trick.reward.coins;
+      if (trick.reward.starDust) account.starDust = (account.starDust || 0) + trick.reward.starDust;
+    }
+
+    // 업적 체크
+    var newAchievements = checkCatAchievements(account);
+
+    var stageUp = checkCatStageUp(account);
+
+    text += "🎉 성공! " + account.name + "(이)가 '" + trickName + "'을(를) 배웠어요!\n\n";
+    text += "⬆️ +" + trick.xp + " XP\n";
+    if (trick.reward && trick.reward.trust) text += "💕 신뢰 +" + trick.reward.trust + "\n";
+    if (trick.reward && trick.reward.coins) text += "🐟 +" + trick.reward.coins + "\n";
+    if (trick.reward && trick.reward.starDust) text += "✨ +" + trick.reward.starDust + "\n";
+    if (trick.passive) text += "\n🎁 패시브 효과: 시간당 " + trick.passive.coinsPerHour + "🐟 자동 수입!";
+    if (trick.adventureBonus) text += "\n🎁 모험 전리품 " + trick.adventureBonus + "배!";
+    if (stageUp) text += "\n\n🎉 성장! " + stageUp.emoji + " " + stageUp.name + "이(가) 되었어요!";
+    text += formatAchievementUnlocks(newAchievements);
+  } else {
+    // 실패
+    account.stageProgress += Math.floor(trick.xp * 0.3);
+    text += "😿 실패... " + account.name + "(이)가 아직 어려워해요.\n\n";
+    text += "성공률: " + Math.round(rate * 100) + "%\n";
+    text += "⬆️ +" + Math.floor(trick.xp * 0.3) + " XP (실패 보상)\n";
+    text += "다시 도전해보세요! 💪";
+  }
+
+  text += "\n\n(오늘 훈련 " + account.dailyActions.trained + "/" + data.config.MAX_DAILY_TRAIN + ")";
+
+  // 랜덤 이벤트 롤
+  var eventMsg = rollCatEvent(account, sender);
+
+  saveCatAccount(sender, account);
+
+  if (eventMsg) text += "\n\n" + eventMsg;
+  replier.reply(text);
+}
+
+// === 핸들러: 기술 목록 ===
+
+function handleCatTricks(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+
+  var data = getCatData();
+  var text = "[ 싱봇 냥냥이 ] 🎓 기술 트리\n━━━━━━━━━━━━━━━━━━\n";
+  var tiers = { 1: "기본기", 2: "중급기", 3: "고급기", 4: "전설기" };
+
+  for (var tier = 1; tier <= 4; tier++) {
+    text += "\n【 " + tiers[tier] + " 】\n";
+    for (var id in data.tricks) {
+      if (!data.tricks.hasOwnProperty(id)) continue;
+      var t = data.tricks[id];
+      if (t.tier !== tier) continue;
+      var learned = hasCatTrick(account, id);
+      var canLearn = true;
+      if (t.requires) {
+        for (var i = 0; i < t.requires.length; i++) {
+          if (!hasCatTrick(account, t.requires[i])) canLearn = false;
+        }
+      }
+      if (account.trust < t.trustReq) canLearn = false;
+      var icon = learned ? "✅" : (canLearn ? "⬜" : "🔒");
+      text += "  " + icon + " " + t.name + " — " + t.desc + "\n";
+    }
+  }
+
+  var learnedCount = account.trickBook ? account.trickBook.length : 0;
+  var totalCount = 0;
+  for (var id in data.tricks) { if (data.tricks.hasOwnProperty(id)) totalCount++; }
+  text += "\n습득: " + learnedCount + "/" + totalCount + "\n'ㅎㄹ [기술명]' 으로 훈련!";
+  replier.reply(text);
+}
+
+// === 랜덤 이벤트 시스템 ===
+
+function rollCatEvent(account, sender) {
+  var data = getCatData();
+  if (!data.events) return null;
+  if (Math.random() > data.config.EVENT_CHANCE) return null;
+
+  // 특성: 행운아 보너스 (긍정 이벤트 확률 UP)
+  var luckyBonus = (account.traits && account.traits.indexOf("lucky") !== -1);
+
+  var roll = Math.random();
+  var msg = "";
+
+  if (roll < (luckyBonus ? 0.60 : 0.50)) {
+    // 긍정 이벤트
+    var evt = pickRandom(data.events.positive);
+    var evtText = evt.text.split("{name}").join(account.name);
+    if (evt.hunger) account.hunger = Math.min(100, account.hunger + evt.hunger);
+    if (evt.happiness) account.happiness = Math.min(100, account.happiness + evt.happiness);
+    if (evt.energy) account.energy = Math.min(100, account.energy + evt.energy);
+    if (evt.trust) account.trust = Math.min(100, account.trust + evt.trust);
+    if (evt.coins) {
+      account.fishCoins += evt.coins;
+      account.stats.totalFishEarned += evt.coins;
+    }
+    msg = "🌟 이벤트!\n" + evtText;
+    if (evt.coins > 0) msg += "\n🐟 +" + evt.coins;
+
+  } else if (roll < (luckyBonus ? 0.75 : 0.75)) {
+    // 부정 이벤트
+    var evt = pickRandom(data.events.negative);
+    var evtText = evt.text.split("{name}").join(account.name);
+    // 특성: 터프가이 — 피해 감소
+    var resist = (account.traits && account.traits.indexOf("tough") !== -1);
+    if (evt.happiness) account.happiness = Math.max(0, account.happiness + (resist ? Math.floor(evt.happiness / 2) : evt.happiness));
+    if (evt.health) account.health = Math.max(0, account.health + (resist ? Math.floor(evt.health / 2) : evt.health));
+    if (evt.braveryCheck && account.personality.bravery < 40) {
+      account.happiness = Math.max(0, account.happiness - 10);
+    }
+    msg = "⚠️ 이벤트!\n" + evtText;
+    if (resist) msg += "\n🏷️ 터프가이: 피해 감소!";
+
+  } else {
+    // 분기형 이벤트
+    var evt = pickRandom(data.events.branching);
+    var evtText = evt.text.split("{name}").join(account.name);
+    account.pendingEvent = {
+      event: evt,
+      expireTime: Date.now() + (evt.timeout || 180000)
+    };
+    msg = "❗ 이벤트 발생!\n" + evtText + "\n\n";
+    for (var i = 0; i < evt.options.length; i++) {
+      msg += (i + 1) + "️⃣ " + evt.options[i].label + " (" + evt.options[i].desc + ")\n";
+    }
+    msg += "\n'ㄴㄴㅇ선택 " + (1) + "' 또는 'ㄴㄴㅇ선택 " + (2) + "'\n(3분 안에 선택!)";
+  }
+
+  return msg;
+}
+
+// === 핸들러: 이벤트 선택 ===
+
+function handleCatEventChoice(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+
+  if (!account.pendingEvent) {
+    replier.reply("[ 싱봇 냥냥이 ] 진행 중인 이벤트가 없어요!");
+    return;
+  }
+
+  if (Date.now() > account.pendingEvent.expireTime) {
+    account.pendingEvent = null;
+    saveCatAccount(sender, account);
+    replier.reply("[ 싱봇 냥냥이 ] ⏰ 이벤트가 만료됐어요! 자동으로 1번이 선택됐어요.");
+    return;
+  }
+
+  var choiceNum = parseInt(msg.replace(/^(냥냥이선택|ㄴㄴㅇ선택)\s*/, "").trim());
+  var evt = account.pendingEvent.event;
+
+  if (isNaN(choiceNum) || choiceNum < 1 || choiceNum > evt.options.length) {
+    replier.reply("[ 싱봇 냥냥이 ] 1~" + evt.options.length + " 중에서 선택해주세요!");
+    return;
+  }
+
+  var option = evt.options[choiceNum - 1];
+  var outcome = null;
+
+  // 성격 기반 결과 결정
+  if (option.outcomes.highAffection && account.personality.affection > 60) {
+    outcome = option.outcomes.highAffection;
+  } else if (option.outcomes.highBravery && account.personality.bravery > 60) {
+    outcome = option.outcomes.highBravery;
+  } else if (option.outcomes.highCuriosity && account.personality.curiosity > 60) {
+    outcome = option.outcomes.highCuriosity;
+  } else {
+    outcome = option.outcomes["default"];
+  }
+
+  var resultText = outcome.text.split("{name}").join(account.name);
+
+  // 결과 적용
+  if (outcome.happiness) account.happiness = Math.max(0, Math.min(100, account.happiness + outcome.happiness));
+  if (outcome.trust) account.trust = Math.min(100, account.trust + outcome.trust);
+  if (outcome.health) account.health = Math.max(0, Math.min(100, account.health + outcome.health));
+  if (outcome.energy) account.energy = Math.max(0, Math.min(100, account.energy + outcome.energy));
+  if (outcome.coins) {
+    account.fishCoins += outcome.coins;
+    account.stats.totalFishEarned += outcome.coins;
+  }
+  if (outcome.bravery_up) {
+    account.personality.bravery = Math.min(100, account.personality.bravery + outcome.bravery_up);
+  }
+
+  account.pendingEvent = null;
+  saveCatAccount(sender, account);
+
+  var text = "[ 싱봇 냥냥이 ] ❗ 이벤트 결과\n━━━━━━━━━━━━━━━━━━\n";
+  text += "선택: " + option.label + "\n\n";
+  text += resultText + "\n";
+  if (outcome.happiness) text += "\n😊 행복 " + (outcome.happiness > 0 ? "+" : "") + outcome.happiness;
+  if (outcome.trust) text += "\n💕 신뢰 +" + outcome.trust;
+  if (outcome.coins) text += "\n🐟 +" + outcome.coins;
+  if (outcome.health) text += "\n❤️ 건강 " + (outcome.health > 0 ? "+" : "") + outcome.health;
+  replier.reply(text);
+}
+
+// === 업적 시스템 ===
+
+function checkCatAchievements(account) {
+  var data = getCatData();
+  if (!data.achievements) return [];
+  if (!account.achievements) account.achievements = [];
+
+  var newUnlocks = [];
+  var checks = {
+    "first_hatch": account.stage >= 1,
+    "first_feed": account.stats.totalFeedings >= 1,
+    "first_play": account.stats.totalPlays >= 1,
+    "first_adventure": account.stats.totalAdventures >= 1,
+    "first_trick": (account.stats.totalTricksLearned || 0) >= 1,
+    "feed_10": account.stats.totalFeedings >= 10,
+    "feed_50": account.stats.totalFeedings >= 50,
+    "play_10": account.stats.totalPlays >= 10,
+    "play_50": account.stats.totalPlays >= 50,
+    "adventure_10": account.stats.totalAdventures >= 10,
+    "adventure_25": account.stats.totalAdventures >= 25,
+    "adventure_50": account.stats.totalAdventures >= 50,
+    "trust_30": account.trust >= 30,
+    "trust_60": account.trust >= 60,
+    "trust_90": account.trust >= 90,
+    "streak_7": account.stats.currentStreak >= 7,
+    "streak_14": account.stats.currentStreak >= 14,
+    "streak_30": account.stats.currentStreak >= 30,
+    "stage_2": account.stage >= 2,
+    "stage_3": account.stage >= 3,
+    "stage_4": account.stage >= 4,
+    "tricks_3": (account.trickBook ? account.trickBook.length : 0) >= 3,
+    "tricks_6": (account.trickBook ? account.trickBook.length : 0) >= 6,
+    "tricks_all": (account.trickBook ? account.trickBook.length : 0) >= 11,
+    "coins_1000": account.fishCoins >= 1000,
+    "all_locations": (account.uniqueLocations ? account.uniqueLocations.length : 0) >= 9
+  };
+
+  for (var i = 0; i < data.achievements.length; i++) {
+    var ach = data.achievements[i];
+    if (account.achievements.indexOf(ach.id) !== -1) continue;
+    if (checks[ach.id]) {
+      account.achievements.push(ach.id);
+      if (ach.coins) {
+        account.fishCoins += ach.coins;
+        account.stats.totalFishEarned += ach.coins;
+      }
+      if (ach.starDust) account.starDust = (account.starDust || 0) + ach.starDust;
+      if (ach.title) {
+        if (!account.titles.unlocked) account.titles.unlocked = [];
+        account.titles.unlocked.push(ach.title);
+        account.titles.equipped = ach.title;
+      }
+      newUnlocks.push(ach);
+    }
+  }
+
+  return newUnlocks;
+}
+
+function formatAchievementUnlocks(achievements) {
+  if (!achievements || achievements.length === 0) return "";
+  var text = "\n\n🏆 업적 달성!";
+  for (var i = 0; i < achievements.length; i++) {
+    var a = achievements[i];
+    text += "\n  " + a.name + " — " + a.desc;
+    if (a.coins) text += " (🐟+" + a.coins + ")";
+    if (a.starDust) text += " (✨+" + a.starDust + ")";
+    if (a.title) text += " [칭호: " + a.title + "]";
+  }
+  return text;
+}
+
+// === 일일퀘스트 시스템 ===
+
+function generateDailyQuests(account) {
+  var data = getCatData();
+  if (!data.dailyQuestPool) return;
+  var today = todayString();
+  if (account.dailyQuests && account.dailyQuests.date === today) return;
+
+  var seed = todaySeed();
+  var pool = data.dailyQuestPool.slice();
+  var quests = [];
+  for (var i = 0; i < 3 && pool.length > 0; i++) {
+    var idx = Math.abs((seed + i * 7) % pool.length);
+    var q = pool.splice(idx, 1)[0];
+    quests.push({ desc: q.desc, type: q.type, target: q.target, reward: q.reward, progress: 0, claimed: false });
+  }
+  account.dailyQuests = { date: today, quests: quests, allClaimed: false };
+}
+
+function updateCatQuestProgress(account, actionType, detail) {
+  if (!account.dailyQuests || !account.dailyQuests.quests) return;
+  for (var i = 0; i < account.dailyQuests.quests.length; i++) {
+    var q = account.dailyQuests.quests[i];
+    if (q.claimed) continue;
+    if (q.type === actionType) {
+      q.progress++;
+    } else if (q.type === "feedSpecific" && actionType === "feed" && detail === q.target) {
+      q.progress++;
+    } else if (q.type === "trainAttempt" && actionType === "trainAttempt") {
+      q.progress++;
+    }
+  }
+}
+
+function handleCatQuest(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+
+  generateDailyQuests(account);
+  saveCatAccount(sender, account);
+
+  var quests = account.dailyQuests.quests;
+  var text = "[ 싱봇 냥냥이 ] 📋 일일퀘스트\n━━━━━━━━━━━━━━━━━━\n";
+  var allDone = true;
+  for (var i = 0; i < quests.length; i++) {
+    var q = quests[i];
+    var done = q.progress >= (typeof q.target === "number" ? q.target : 1);
+    var icon = q.claimed ? "✅" : (done ? "🎁" : "⬜");
+    if (!done) allDone = false;
+    var prog = typeof q.target === "number" ? (Math.min(q.progress, q.target) + "/" + q.target) : (q.progress > 0 ? "완료" : "미완료");
+    text += "\n" + icon + " " + q.desc + " (" + prog + ") — " + q.reward + "🐟";
+  }
+
+  if (allDone && !account.dailyQuests.allClaimed) {
+    text += "\n\n🎉 올클리어 보너스: 100🐟 + 1✨\n'ㄴㄴㅋㅂ'로 보상 수령!";
+  } else {
+    text += "\n\n완료된 퀘스트는 'ㄴㄴㅋㅂ'로 보상 수령!";
+  }
+  replier.reply(text);
+}
+
+function handleCatQuestClaim(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+
+  generateDailyQuests(account);
+
+  var quests = account.dailyQuests.quests;
+  var claimed = 0;
+  var totalReward = 0;
+  for (var i = 0; i < quests.length; i++) {
+    var q = quests[i];
+    if (q.claimed) continue;
+    var target = typeof q.target === "number" ? q.target : 1;
+    if (q.progress >= target) {
+      q.claimed = true;
+      account.fishCoins += q.reward;
+      account.stats.totalFishEarned += q.reward;
+      totalReward += q.reward;
+      claimed++;
+    }
+  }
+
+  // 올클리어 보너스
+  var allClaimed = true;
+  for (var i = 0; i < quests.length; i++) {
+    if (!quests[i].claimed) { allClaimed = false; break; }
+  }
+  var bonusMsg = "";
+  if (allClaimed && !account.dailyQuests.allClaimed) {
+    account.dailyQuests.allClaimed = true;
+    account.fishCoins += 100;
+    account.starDust = (account.starDust || 0) + 1;
+    account.stats.totalFishEarned += 100;
+    bonusMsg = "\n\n🎉 올클리어 보너스! 🐟+100 ✨+1";
+  }
+
+  saveCatAccount(sender, account);
+
+  if (claimed === 0) {
+    replier.reply("[ 싱봇 냥냥이 ] 수령할 보상이 없어요!\n'ㄴㄴㅋ'로 퀘스트를 확인하세요.");
+    return;
+  }
+
+  replier.reply(
+    "[ 싱봇 냥냥이 ] 📋 퀘스트 보상 수령!\n━━━━━━━━━━━━━━━━━━\n" +
+    "✅ " + claimed + "개 완료! 🐟 +" + totalReward + bonusMsg + "\n" +
+    "💰 잔액: 🐟 " + account.fishCoins
+  );
+}
+
+// === 핸들러: 업적 보기 ===
+
+function handleCatAchievements(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+
+  var data = getCatData();
+  if (!account.achievements) account.achievements = [];
+
+  var text = "[ 싱봇 냥냥이 ] 🏆 업적\n━━━━━━━━━━━━━━━━━━\n";
+  var unlocked = 0;
+  for (var i = 0; i < data.achievements.length; i++) {
+    var a = data.achievements[i];
+    var done = account.achievements.indexOf(a.id) !== -1;
+    if (done) unlocked++;
+    text += (done ? "✅" : "⬜") + " " + a.name + "\n";
+  }
+  text += "\n달성: " + unlocked + "/" + data.achievements.length;
+  replier.reply(text);
+}
+
 // === 핸들러: 도움말 ===
 
 function handleCatHelp(room, msg, sender, replier) {
@@ -1220,16 +1786,20 @@ function handleCatHelp(room, msg, sender, replier) {
     "━━━━━━━━━━━━━━━━━━\n\n" +
     "🥚 ㄴㄴㅇ등록 [이름] — 고양이 입양\n" +
     "📊 ㄴㄴ — 상태 확인\n" +
-    "🐾 ㄴㄴㅇ돌봐 — 쓰다듬기/알 돌보기\n\n" +
+    "🐾 ㄴㄴㅇ돌봐 — 쓰다듬기\n\n" +
     "🍖 ㅁㅁ [음식] — 밥 주기\n" +
     "🧶 ㄴㄹ [놀이] — 놀아주기\n" +
     "💤 ㄴㄴㅇ재워 — 재우기\n\n" +
     "🗺️ ㅁㅎ [장소] — 모험 보내기\n" +
     "📋 ㅁㅎㄱㄱ — 모험 결과\n\n" +
+    "🎓 ㅎㄹ [기술] — 훈련\n" +
+    "📖 ㄴㄴㅇ기술 — 기술 목록\n\n" +
     "🏪 ㄴㄴㅅㅈ — 상점\n" +
     "🛒 ㄴㄴㄱ [아이템] — 구매\n" +
     "🎒 ㄴㄴㅇㅂ — 인벤토리\n" +
-    "👗 ㄴㄴㅇ의상 — 의상 관리"
+    "👗 ㄴㄴㅇ의상 — 의상 관리\n\n" +
+    "📋 ㄴㄴㅋ — 일일퀘스트\n" +
+    "🏆 ㄴㄴㅇ업적 — 업적 확인"
   );
 }
 
@@ -1237,16 +1807,22 @@ function handleCatHelp(room, msg, sender, replier) {
 
 var CAT_COMMANDS = [
   { triggers: _ct(["냥냥이등록"]), handler: handleCatRegister, hasArgs: true },
-  { triggers: _ct(["냥냥이", "냥냥이정보"]).concat(["ㄴㄴ"]), handler: handleCatInfo },
   { triggers: _ct(["냥냥이돌봐"]), handler: handleCatCare },
   { triggers: _ct(["냥냥이밥"]).concat(["ㅁㅁ"]), handler: handleCatFeed, hasArgs: true },
   { triggers: _ct(["냥냥이놀자"]).concat(["ㄴㄹ"]), handler: handleCatPlay, hasArgs: true },
   { triggers: _ct(["냥냥이재워"]), handler: handleCatSleep },
-  { triggers: _ct(["냥냥이모험"]).concat(["ㅁㅎ"]), handler: handleCatAdventure, hasArgs: true },
   { triggers: _ct(["냥냥이모험결과"]).concat(["ㅁㅎㄱㄱ"]), handler: handleCatAdventureResult },
+  { triggers: _ct(["냥냥이모험"]).concat(["ㅁㅎ"]), handler: handleCatAdventure, hasArgs: true },
+  { triggers: _ct(["냥냥이훈련"]).concat(["ㅎㄹ"]), handler: handleCatTrain, hasArgs: true },
+  { triggers: _ct(["냥냥이기술"]), handler: handleCatTricks },
+  { triggers: _ct(["냥냥이선택"]), handler: handleCatEventChoice, hasArgs: true },
+  { triggers: _ct(["냥냥이퀘보상"]).concat(["ㄴㄴㅋㅂ"]), handler: handleCatQuestClaim },
+  { triggers: _ct(["냥냥이퀘스트"]).concat(["ㄴㄴㅋ"]), handler: handleCatQuest },
+  { triggers: _ct(["냥냥이업적"]), handler: handleCatAchievements },
   { triggers: _ct(["냥냥이상점"]).concat(["ㄴㄴㅅㅈ"]), handler: handleCatShop },
   { triggers: _ct(["냥냥이구매"]).concat(["ㄴㄴㄱ"]), handler: handleCatBuy, hasArgs: true },
   { triggers: _ct(["냥냥이인벤"]).concat(["ㄴㄴㅇㅂ"]), handler: handleCatInventory },
   { triggers: _ct(["냥냥이의상"]), handler: handleCatOutfit, hasArgs: true },
-  { triggers: _ct(["냥냥이도움말"]).concat(["ㄴㄴㄷ"]), handler: handleCatHelp }
+  { triggers: _ct(["냥냥이도움말"]).concat(["ㄴㄴㄷ"]), handler: handleCatHelp },
+  { triggers: _ct(["냥냥이", "냥냥이정보"]).concat(["ㄴㄴ"]), handler: handleCatInfo }
 ];
