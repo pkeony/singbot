@@ -1,0 +1,42 @@
+name: CGV IMAX 체크
+
+on:
+  schedule:
+    # 매일 오전 9시 ~ 자정, 30분마다 (KST = UTC+9)
+    # UTC 0:00 = KST 9:00, UTC 15:00 = KST 0:00
+    - cron: "*/30 0-15 * * *"
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        working-directory: cgv-alert
+        run: npm install puppeteer
+
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: cgv-alert/last_state.json
+          key: cgv-state-${{ github.run_id }}
+          restore-keys: cgv-state-
+
+      - name: Run CGV checker
+        working-directory: cgv-alert
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node checker.js
+
+      - name: Save state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: cgv-alert/last_state.json
+          key: cgv-state-${{ github.run_id }}
