@@ -2,4 +2,8 @@ node_modules/
 *.png
 *.jpg
 *.jpeg
-site/images/
+*.pptx
+*:Zone.Identifier
+site/
+test/
+data/newdata/
