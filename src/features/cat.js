@@ -580,6 +580,19 @@ function handleCatInfo(room, msg, sender, replier) {
     }
   }
 
+  // 비밀진화 힌트
+  var evoHint = getEvolutionHint(account);
+  if (evoHint) text += "\n\n🔮 " + evoHint;
+
+  // 비밀진화 체크
+  var evo = checkSecretEvolution(account);
+  if (evo) {
+    account.stage = 5;
+    account.secretFlags.evolution = evo.id;
+    saveCatAccount(sender, account);
+    text += "\n\n━━━━━━━━━━━━━━━━━━\n" + evo.emoji + " 비밀진화! " + evo.name + "!\n" + evo.desc + "\n보너스: " + evo.bonus;
+  }
+
   text += "\n\n'ㅁㅁ' 밥 | 'ㄴㄹ' 놀기 | 'ㅁㅎ' 모험 | 'ㄴㄴㄷ' 도움말";
   replier.reply(text);
 }
@@ -1778,6 +1791,339 @@ function handleCatAchievements(room, msg, sender, replier) {
   replier.reply(text);
 }
 
+// === 전체 계정 로드 (랭킹/소셜용) ===
+
+function loadAllCatAccounts() {
+  try {
+    var dir = new java.io.File(CAT_DATA_DIR);
+    if (!dir.exists()) return;
+    var files = dir.listFiles();
+    if (!files) return;
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!f.getName().endsWith(".json")) continue;
+      var senderName = f.getName().replace(".json", "");
+      if (catAccounts[senderName]) continue;
+      try {
+        var fis = new java.io.FileInputStream(f);
+        var reader = new java.io.InputStreamReader(fis, "UTF-8");
+        var br = new java.io.BufferedReader(reader);
+        var data = "";
+        var line;
+        while ((line = br.readLine()) != null) data += line;
+        br.close(); reader.close(); fis.close();
+        catAccounts[senderName] = JSON.parse(data);
+      } catch (e) {}
+    }
+  } catch (e) {}
+}
+
+// === 소셜: 인사 ===
+
+function handleCatGreet(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+  if (account.stage < 1) {
+    replier.reply("[ 싱봇 냥냥이 ] 🥚 알은 인사할 수 없어요!");
+    return;
+  }
+
+  var targetName = msg.replace(/^(냥냥이인사|ㄴㄴㅇ인사)\s*/, "").trim();
+  if (!targetName) {
+    replier.reply("[ 싱봇 냥냥이 ] 'ㄴㄴㅇ인사 [상대이름]' 형식으로 입력해주세요!");
+    return;
+  }
+
+  // 쿨다운 (1시간)
+  var now = Date.now();
+  if (account.socialCooldown && now - account.socialCooldown < 3600000) {
+    var remain = Math.ceil((3600000 - (now - account.socialCooldown)) / 60000);
+    replier.reply("[ 싱봇 냥냥이 ] ⏰ " + remain + "분 후에 다시 인사할 수 있어요!");
+    return;
+  }
+
+  // 상대 찾기
+  loadAllCatAccounts();
+  var target = null;
+  var targetSender = null;
+  for (var s in catAccounts) {
+    if (!catAccounts.hasOwnProperty(s)) continue;
+    if (s === sender) continue;
+    if (catAccounts[s].name === targetName) {
+      target = catAccounts[s];
+      targetSender = s;
+      break;
+    }
+  }
+
+  if (!target) {
+    replier.reply("[ 싱봇 냥냥이 ] '" + targetName + "' 고양이를 찾을 수 없어요!");
+    return;
+  }
+  if (target.stage < 1) {
+    replier.reply("[ 싱봇 냥냥이 ] " + targetName + "(은)는 아직 알이에요!");
+    return;
+  }
+
+  applyCatDecay(account);
+  account.socialCooldown = now;
+  account.totalInteractions++;
+  account.lastInteractTime = now;
+
+  // 우정 찾기/생성
+  if (!account.catFriends) account.catFriends = [];
+  var friendship = null;
+  for (var i = 0; i < account.catFriends.length; i++) {
+    if (account.catFriends[i].sender === targetSender) {
+      friendship = account.catFriends[i];
+      break;
+    }
+  }
+  if (!friendship) {
+    friendship = { sender: targetSender, catName: target.name, friendship: 0 };
+    account.catFriends.push(friendship);
+  }
+
+  // 성격 기반 결과
+  var myAff = account.personality.affection;
+  var myMis = account.personality.mischief;
+  var myBrv = account.personality.bravery;
+  var theirAff = target.personality.affection;
+
+  var friendGain = 1;
+  var happyGain = 10;
+  var trustGain = 1;
+  var coinsGain = 0;
+  var reaction = "";
+
+  // 특성: 매력쟁이
+  if (account.traits && account.traits.indexOf("charmer") !== -1) {
+    friendGain += 1;
+  }
+
+  if (myAff > 60 && theirAff > 60) {
+    friendGain += 2;
+    happyGain = 20;
+    reaction = account.name + "와(과) " + target.name + "(이)가 서로 코를 비비며 인사했어요! 💕🐱🐱💕";
+  } else if (myMis > 60) {
+    coinsGain = catRandInt(5, 15);
+    reaction = account.name + "(이)가 " + target.name + "의 간식을 살짝 뺏었어요! 😼🐟";
+  } else if (myBrv > 60 && target.personality.bravery > 60) {
+    coinsGain = catRandInt(10, 30);
+    happyGain = 15;
+    reaction = account.name + "와(과) " + target.name + "(이)가 힘겨루기를 했어요! 💪 승자: " + account.name + "!";
+  } else {
+    reaction = account.name + "와(과) " + target.name + "(이)가 어색하게 눈인사를 했어요 👀";
+  }
+
+  friendship.friendship += friendGain;
+  account.happiness = Math.min(100, account.happiness + happyGain);
+  account.trust = Math.min(100, account.trust + trustGain);
+  if (coinsGain > 0) {
+    account.fishCoins += coinsGain;
+    account.stats.totalFishEarned += coinsGain;
+  }
+
+  saveCatAccount(sender, account);
+
+  var text = "[ 싱봇 냥냥이 ] 🤝 인사!\n━━━━━━━━━━━━━━━━━━\n";
+  text += reaction + "\n\n";
+  text += "😊 행복 +" + happyGain + " | 💕 신뢰 +" + trustGain + "\n";
+  text += "🤝 " + target.name + "과(와)의 우정: ❤️ " + friendship.friendship + "\n";
+  if (coinsGain > 0) text += "🐟 +" + coinsGain + "\n";
+  if (friendship.friendship >= 5) text += "\n✨ 우정 Lv.5! 나중에 합동모험이 가능해질 거예요!";
+  replier.reply(text);
+}
+
+// === 랭킹 ===
+
+function handleCatRanking(room, msg, sender, replier) {
+  loadAllCatAccounts();
+
+  var cats = [];
+  for (var s in catAccounts) {
+    if (!catAccounts.hasOwnProperty(s)) continue;
+    var a = catAccounts[s];
+    if (a.stage < 1) continue;
+    cats.push({
+      name: a.name,
+      sender: s,
+      stage: a.stage,
+      xp: a.stageProgress,
+      adventures: a.adventureCount || 0,
+      tricks: a.trickBook ? a.trickBook.length : 0,
+      streak: a.stats.currentStreak || 0
+    });
+  }
+
+  if (cats.length === 0) {
+    replier.reply("[ 싱봇 냥냥이 ] 🏆 아직 랭킹에 등록된 고양이가 없어요!");
+    return;
+  }
+
+  // 성장 기준 정렬
+  cats.sort(function(a, b) {
+    if (b.stage !== a.stage) return b.stage - a.stage;
+    return b.xp - a.xp;
+  });
+
+  var data = getCatData();
+  var text = "[ 싱봇 냥냥이 ] 🏆 랭킹\n━━━━━━━━━━━━━━━━━━\n";
+  var medals = ["🥇", "🥈", "🥉"];
+  for (var i = 0; i < Math.min(cats.length, 10); i++) {
+    var c = cats[i];
+    var medal = i < 3 ? medals[i] : (i + 1) + ".";
+    var stageName = data.stages[c.stage] ? data.stages[c.stage].name : "???";
+    var isMine = c.sender === sanitizeSender(sender) ? " 👈" : "";
+    text += "\n" + medal + " " + c.name + " — " + stageName + " (XP:" + c.xp + ")";
+    text += "\n   🗺️" + c.adventures + " 🎓" + c.tricks + " 🔥" + c.streak + "일" + isMine;
+  }
+  replier.reply(text);
+}
+
+// === 비밀진화 ===
+
+function checkSecretEvolution(account) {
+  if (account.stage < 4) return null;
+  if (account.stage >= 5) return null;
+
+  var tricks = account.trickBook ? account.trickBook.length : 0;
+  var locs = account.uniqueLocations ? account.uniqueLocations.length : 0;
+  var p = account.personality;
+
+  // 1. 요정고양이: 호기심 90+, 모든 장소, 보물 5+
+  var treasureCount = 0;
+  if (account.discoveredTreasures) {
+    for (var k in account.discoveredTreasures) {
+      if (account.discoveredTreasures.hasOwnProperty(k)) treasureCount++;
+    }
+  }
+  if (p.curiosity >= 90 && locs >= 9 && treasureCount >= 5) {
+    return { id: "fairy", name: "요정고양이", emoji: "🧚", desc: "신비로운 요정의 힘이 깃들었어요!", bonus: "꿈 보상 3배, 요정의 숲 해금" };
+  }
+
+  // 2. 그림자고양이: 장난 90+, 문열기 습득
+  if (p.mischief >= 90 && hasCatTrick(account, "dooropen")) {
+    return { id: "shadow", name: "그림자고양이", emoji: "🌑", desc: "어둠 속에서 빛나는 눈...", bonus: "모험 시간 50% 단축" };
+  }
+
+  // 3. 수호고양이: 신뢰 95+, 방치 0회, 밥 50+
+  if (account.trust >= 95 && (account.stats.neglectCount || 0) === 0 && account.stats.totalFeedings >= 50) {
+    return { id: "guardian", name: "수호고양이", emoji: "🛡️", desc: "집사를 지키는 수호 정령!", bonus: "부정 이벤트 면역, 패시브 수입" };
+  }
+
+  // 4. 모험왕고양이: 용기 90+, 모험 50+
+  if (p.bravery >= 90 && (account.stats.totalAdventures || 0) >= 50) {
+    return { id: "explorer", name: "모험왕고양이", emoji: "🌟", desc: "전설의 탐험가!", bonus: "전설의 땅 해금, 전리품 3배" };
+  }
+
+  // 5. 황금고양이: 모든 기술, 업적 20+, 스트릭 30+
+  if (tricks >= 11 && (account.achievements ? account.achievements.length : 0) >= 20 && (account.stats.currentStreak || 0) >= 30) {
+    return { id: "golden", name: "황금고양이", emoji: "✨👑", desc: "전설의 황금 고양이!", bonus: "모든 수입 2배, 전설의 칭호" };
+  }
+
+  return null;
+}
+
+// 상태 확인 시 비밀진화 힌트
+function getEvolutionHint(account) {
+  if (account.stage < 4) return null;
+  if (account.stage >= 5) return null;
+
+  var p = account.personality;
+  var hints = [];
+  if (p.curiosity >= 80) hints.push("호기심이 뭔가를 감지하고 있어요... ✨");
+  if (p.mischief >= 80) hints.push("그림자 속에서 무언가 속삭이는 것 같아요... 🌑");
+  if (account.trust >= 85) hints.push("깊은 유대감이 빛나고 있어요... 🛡️");
+  if (p.bravery >= 80) hints.push("모험의 부름이 들려오는 것 같아요... 🌟");
+
+  if (hints.length === 0) return null;
+  return pickRandom(hints);
+}
+
+// === 환생 (프레스티지) ===
+
+function handleCatPrestige(room, msg, sender, replier) {
+  var account = loadCatAccount(sender);
+  if (!account) {
+    replier.reply("[ 싱봇 냥냥이 ] 먼저 'ㄴㄴㅇ등록 [이름]'으로 등록하세요!");
+    return;
+  }
+
+  if (account.stage < 4) {
+    replier.reply("[ 싱봇 냥냥이 ] 🔒 환생은 장로묘(Lv.4) 이상만 가능해요!\n현재: " + getCatData().stages[account.stage].name);
+    return;
+  }
+
+  var confirm = msg.replace(/^(냥냥이환생|ㄴㄴㅇ환생)\s*/, "").trim();
+  if (confirm !== "확인") {
+    var gen = (account.prestigeCount || 0) + 2;
+    replier.reply(
+      "[ 싱봇 냥냥이 ] 🔄 환생\n━━━━━━━━━━━━━━━━━━\n" +
+      account.name + "(이)가 새로운 삶을 시작합니다...\n\n" +
+      "【 유지되는 것 】\n" +
+      "  ✨ 별먼지: " + (account.starDust || 0) + "\n" +
+      "  🏆 업적 " + (account.achievements ? account.achievements.length : 0) + "개\n" +
+      "  📖 보물 도감\n" +
+      "  💰 영구 수입 보너스 +" + (gen - 1) + "0%\n\n" +
+      "【 초기화되는 것 】\n" +
+      "  레벨, 스탯, 기술, 인벤토리, 물고기코인\n\n" +
+      gen + "세대 고양이가 됩니다!\n\n" +
+      "⚠️ 정말 환생하려면: 'ㄴㄴㅇ환생 확인'"
+    );
+    return;
+  }
+
+  // 환생 실행
+  var oldName = account.name;
+  var preserved = {
+    starDust: account.starDust || 0,
+    achievements: account.achievements || [],
+    discoveredTreasures: account.discoveredTreasures || {},
+    prestigeCount: (account.prestigeCount || 0) + 1,
+    titles: account.titles || { unlocked: [], equipped: null },
+    stats: {
+      totalFeedings: account.stats.totalFeedings,
+      totalPlays: account.stats.totalPlays,
+      totalAdventures: account.stats.totalAdventures,
+      totalTricksLearned: account.stats.totalTricksLearned || 0,
+      totalFishEarned: account.stats.totalFishEarned,
+      totalTreasuresFound: account.stats.totalTreasuresFound || 0,
+      longestStreak: account.stats.longestStreak,
+      currentStreak: 0,
+      lastStreakDate: "",
+      neglectCount: account.stats.neglectCount || 0,
+      perfectDays: account.stats.perfectDays || 0
+    }
+  };
+
+  // 새 계정 생성 (같은 이름)
+  var newAccount = createCatAccount(sender, oldName);
+  newAccount.starDust = preserved.starDust;
+  newAccount.achievements = preserved.achievements;
+  newAccount.discoveredTreasures = preserved.discoveredTreasures;
+  newAccount.prestigeCount = preserved.prestigeCount;
+  newAccount.titles = preserved.titles;
+  newAccount.stats = preserved.stats;
+
+  // 환생 보너스: 초기 코인 증가
+  newAccount.fishCoins = 100 + (preserved.prestigeCount * 50);
+
+  saveCatAccount(sender, newAccount);
+
+  replier.reply(
+    "[ 싱봇 냥냥이 ] 🔄 환생 완료!\n━━━━━━━━━━━━━━━━━━\n" +
+    oldName + "(이)가 새로운 알로 돌아왔어요! 🥚\n\n" +
+    "🌟 " + (preserved.prestigeCount + 1) + "세대 시작!\n" +
+    "💰 영구 수입 보너스: +" + (preserved.prestigeCount * 10) + "%\n" +
+    "🐟 시작 코인: " + newAccount.fishCoins + "\n\n" +
+    "'ㄴㄴㅇ돌봐'로 새 알을 돌봐주세요!"
+  );
+}
+
 // === 핸들러: 도움말 ===
 
 function handleCatHelp(room, msg, sender, replier) {
@@ -1797,9 +2143,12 @@ function handleCatHelp(room, msg, sender, replier) {
     "🏪 ㄴㄴㅅㅈ — 상점\n" +
     "🛒 ㄴㄴㄱ [아이템] — 구매\n" +
     "🎒 ㄴㄴㅇㅂ — 인벤토리\n" +
-    "👗 ㄴㄴㅇ의상 — 의상 관리\n\n" +
+    "👗 ㄴㄴㅇ의상 — 의상\n\n" +
     "📋 ㄴㄴㅋ — 일일퀘스트\n" +
-    "🏆 ㄴㄴㅇ업적 — 업적 확인"
+    "🏆 ㄴㄴㅇ업적 — 업적\n\n" +
+    "🤝 ㄴㄴㅇ인사 [고양이] — 소셜\n" +
+    "🏆 ㄴㄴㄹㅋ — 랭킹\n" +
+    "🔄 ㄴㄴㅇ환생 — 환생 (Lv.4+)"
   );
 }
 
@@ -1819,6 +2168,9 @@ var CAT_COMMANDS = [
   { triggers: _ct(["냥냥이퀘보상"]).concat(["ㄴㄴㅋㅂ"]), handler: handleCatQuestClaim },
   { triggers: _ct(["냥냥이퀘스트"]).concat(["ㄴㄴㅋ"]), handler: handleCatQuest },
   { triggers: _ct(["냥냥이업적"]), handler: handleCatAchievements },
+  { triggers: _ct(["냥냥이인사"]), handler: handleCatGreet, hasArgs: true },
+  { triggers: _ct(["냥냥이랭킹"]).concat(["ㄴㄴㄹㅋ"]), handler: handleCatRanking },
+  { triggers: _ct(["냥냥이환생"]), handler: handleCatPrestige, hasArgs: true },
   { triggers: _ct(["냥냥이상점"]).concat(["ㄴㄴㅅㅈ"]), handler: handleCatShop },
   { triggers: _ct(["냥냥이구매"]).concat(["ㄴㄴㄱ"]), handler: handleCatBuy, hasArgs: true },
   { triggers: _ct(["냥냥이인벤"]).concat(["ㄴㄴㅇㅂ"]), handler: handleCatInventory },
