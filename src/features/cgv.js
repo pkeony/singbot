@@ -337,6 +337,28 @@ function handleCgvSearch(room, msg, sender, replier) {
   replier.reply(text);
 }
 
+// ===== CGV 영화 목록 (전체) =====
+function handleCgvMovieList(room, msg, sender, replier) {
+  var result = cgvApiRequest("GET", "/movies");
+  if (result.error) {
+    replier.reply("[ 싱봇 CGV ] API 연결 실패!\n" + result.error);
+    return;
+  }
+
+  var movies = result.movies || [];
+  if (movies.length === 0) {
+    replier.reply("[ 싱봇 CGV ] 영화 목록이 아직 없습니다!\n잠시 후 다시 시도해주세요.");
+    return;
+  }
+
+  var text = "[ 싱봇 CGV ] 🎬 용아맥 상영 중 (" + movies.length + "편)\n━━━━━━━━━━━━━━━━━━";
+  for (var i = 0; i < movies.length; i++) {
+    text += "\n" + (i + 1) + ". " + movies[i].movNm;
+  }
+  text += "\n\n━━━━━━━━━━━━━━━━━━\nCGV등록 영화명 날짜 로 감시 추가!";
+  replier.reply(text);
+}
+
 // ===== 도움말 =====
 function handleCgvHelp(room, msg, sender, replier) {
   replier.reply(
@@ -351,7 +373,8 @@ function handleCgvHelp(room, msg, sender, replier) {
       "   예) CGV삭제 짱구\n" +
       "📋 CGV목록 — 감시 목록 확인\n" +
       "🔍 CGV영화검색 영화명\n" +
-      "   예) CGV영화검색 짱구\n\n" +
+      "   예) CGV영화검색 짱구\n" +
+      "📜 CGV영화목록 — 전체 상영 영화\n\n" +
       "🔔 새 상영 뜨면 카톡으로 자동 알림!\n" +
       "⏱️ 체크 주기: 5분"
   );
@@ -363,5 +386,6 @@ var CGV_COMMANDS = [
   { triggers: ["CGV삭제", "cgv삭제", "ㅊㄱㅂ삭제"], handler: handleCgvRemove, hasArgs: true },
   { triggers: ["CGV목록", "cgv목록", "ㅊㄱㅂ목록"], handler: handleCgvList },
   { triggers: ["CGV영화검색", "cgv영화검색", "ㅊㄱㅂ영화검색"], handler: handleCgvSearch, hasArgs: true },
+  { triggers: ["CGV영화목록", "cgv영화목록", "ㅊㄱㅂ영화목록"], handler: handleCgvMovieList },
   { triggers: ["CGV", "cgv", "ㅊㄱㅂ"], handler: handleCgvStatus, hasArgs: true },
 ];

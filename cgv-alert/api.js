@@ -90,6 +90,12 @@ const server = http.createServer(async (req, res) => {
     return respond(res, 200, { ok: true, watchList: list });
   }
 
+  // GET /movies — 전체 영화 목록
+  if (p === "/movies" && req.method === "GET") {
+    const movies = loadJSON(MOVIELIST_FILE);
+    return respond(res, 200, { movies });
+  }
+
   // GET /search?q=keyword
   if (p === "/search" && req.method === "GET") {
     if (!q.q) return respond(res, 400, { error: "q required" });
