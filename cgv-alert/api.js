@@ -10,6 +10,36 @@ const API_KEY = process.env.CGV_API_KEY || "singbot-cgv-2026";
 const WATCHLIST_FILE = path.join(__dirname, "watch_list.json");
 const MOVIELIST_FILE = path.join(__dirname, "movie_list.json");
 
+const SEOUL_THEATERS = [
+  { siteNo: "0056", name: "강남" },
+  { siteNo: "0001", name: "강변" },
+  { siteNo: "0229", name: "건대입구" },
+  { siteNo: "0010", name: "구로" },
+  { siteNo: "0063", name: "대학로" },
+  { siteNo: "0252", name: "동대문" },
+  { siteNo: "0230", name: "등촌" },
+  { siteNo: "0009", name: "명동" },
+  { siteNo: "0011", name: "목동" },
+  { siteNo: "0057", name: "미아" },
+  { siteNo: "0030", name: "불광" },
+  { siteNo: "0046", name: "상봉" },
+  { siteNo: "0300", name: "성신여대입구" },
+  { siteNo: "0088", name: "송파" },
+  { siteNo: "0276", name: "수유" },
+  { siteNo: "0150", name: "신촌아트레온" },
+  { siteNo: "0040", name: "압구정" },
+  { siteNo: "0112", name: "여의도" },
+  { siteNo: "0059", name: "영등포" },
+  { siteNo: "0074", name: "왕십리" },
+  { siteNo: "0013", name: "용산아이파크몰" },
+  { siteNo: "0131", name: "중계" },
+  { siteNo: "0199", name: "천호" },
+  { siteNo: "0107", name: "청담씨네시티" },
+  { siteNo: "0223", name: "피카디리1958" },
+  { siteNo: "0164", name: "하계" },
+  { siteNo: "0191", name: "홍대" },
+];
+
 function loadJSON(filepath) {
   try {
     return JSON.parse(fs.readFileSync(filepath, "utf8"));
@@ -61,13 +91,15 @@ const server = http.createServer(async (req, res) => {
     if (!body || !body.movNo || !body.movNm || !body.dates || !body.dates.length) {
       return respond(res, 400, { error: "movNo, movNm, dates[] required" });
     }
+    const siteNo = body.siteNo || "0013";
+    const siteNm = body.siteNm || "용산아이파크몰";
     const list = loadJSON(WATCHLIST_FILE);
-    const idx = list.findIndex((w) => w.movNo === body.movNo);
+    const idx = list.findIndex((w) => w.movNo === body.movNo && (w.siteNo || "0013") === siteNo);
     if (idx >= 0) {
       list[idx].dates = [...new Set([...list[idx].dates, ...body.dates])].sort();
       list[idx].movNm = body.movNm;
     } else {
-      list.push({ movNo: body.movNo, movNm: body.movNm, dates: body.dates });
+      list.push({ movNo: body.movNo, movNm: body.movNm, dates: body.dates, siteNo, siteNm });
     }
     saveJSON(WATCHLIST_FILE, list);
     return respond(res, 200, { ok: true, watchList: list });
@@ -88,6 +120,11 @@ const server = http.createServer(async (req, res) => {
     }
     saveJSON(WATCHLIST_FILE, list);
     return respond(res, 200, { ok: true, watchList: list });
+  }
+
+  // GET /theaters — 서울 CGV 극장 목록
+  if (p === "/theaters" && req.method === "GET") {
+    return respond(res, 200, { theaters: SEOUL_THEATERS });
   }
 
   // GET /movies — 전체 영화 목록

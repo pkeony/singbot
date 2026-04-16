@@ -3741,6 +3741,48 @@ var _cgvNotifiedIds = {};
 var CGV_API_BASE = "http://35.212.161.13:8080";
 var CGV_API_KEY = "singbot-cgv-2026";
 
+// 서울 CGV 극장 목록
+var SEOUL_THEATERS = [
+  { siteNo: "0056", name: "강남" },
+  { siteNo: "0001", name: "강변" },
+  { siteNo: "0229", name: "건대입구" },
+  { siteNo: "0010", name: "구로" },
+  { siteNo: "0063", name: "대학로" },
+  { siteNo: "0252", name: "동대문" },
+  { siteNo: "0230", name: "등촌" },
+  { siteNo: "0009", name: "명동" },
+  { siteNo: "0011", name: "목동" },
+  { siteNo: "0057", name: "미아" },
+  { siteNo: "0030", name: "불광" },
+  { siteNo: "0046", name: "상봉" },
+  { siteNo: "0300", name: "성신여대입구" },
+  { siteNo: "0088", name: "송파" },
+  { siteNo: "0276", name: "수유" },
+  { siteNo: "0150", name: "신촌아트레온" },
+  { siteNo: "0040", name: "압구정" },
+  { siteNo: "0112", name: "여의도" },
+  { siteNo: "0059", name: "영등포" },
+  { siteNo: "0074", name: "왕십리" },
+  { siteNo: "0013", name: "용산아이파크몰" },
+  { siteNo: "0131", name: "중계" },
+  { siteNo: "0199", name: "천호" },
+  { siteNo: "0107", name: "청담씨네시티" },
+  { siteNo: "0223", name: "피카디리1958" },
+  { siteNo: "0164", name: "하계" },
+  { siteNo: "0191", name: "홍대" }
+];
+
+function findTheater(query) {
+  if (!query) return null;
+  var q = query.toLowerCase();
+  for (var i = 0; i < SEOUL_THEATERS.length; i++) {
+    if (SEOUL_THEATERS[i].name.toLowerCase().indexOf(q) !== -1) {
+      return SEOUL_THEATERS[i];
+    }
+  }
+  return null;
+}
+
 // ntfy에서 최근 알림 가져오기
 function fetchCgvAlerts(since) {
   var url = CGV_NTFY_API + "?poll=1&since=" + (since || "1h");
@@ -3898,24 +3940,39 @@ function handleCgvStatus(room, msg, sender, replier) {
 function handleCgvRegister(room, msg, sender, replier) {
   var args = msg.replace(/^(CGV등록|cgv등록|ㅊㄱㅂ등록)\s*/, "").trim();
   if (!args) {
-    replier.reply("[ 싱봇 CGV ] 사용법: CGV등록 영화명 날짜\n예) CGV등록 짱구 20260425\n예) CGV등록 짱구 0425");
+    replier.reply("[ 싱봇 CGV ] 사용법: CGV등록 [극장] 영화명 날짜\n예) CGV등록 짱구 20260425\n예) CGV등록 강남 짱구 0425\n극장 생략 시 용산아이파크몰");
     return;
   }
 
   var parts = args.split(/\s+/);
   var date = "";
   var movieQuery = "";
+  var theater = null;
   var lastPart = parts[parts.length - 1];
 
   if (/^\d{8}$/.test(lastPart)) {
     date = lastPart;
-    movieQuery = parts.slice(0, -1).join(" ");
+    parts = parts.slice(0, -1);
   } else if (/^\d{4}$/.test(lastPart) && parts.length > 1) {
     date = new Date().getFullYear().toString() + lastPart;
-    movieQuery = parts.slice(0, -1).join(" ");
+    parts = parts.slice(0, -1);
   } else {
-    replier.reply("[ 싱봇 CGV ] 날짜를 입력해주세요!\n예) CGV등록 짱구 20260425\n예) CGV등록 짱구 0425");
+    replier.reply("[ 싱봇 CGV ] 날짜를 입력해주세요!\n예) CGV등록 짱구 20260425\n예) CGV등록 강남 짱구 0425");
     return;
+  }
+
+  // 첫 단어가 극장명인지 확인
+  if (parts.length > 1) {
+    var maybeTheater = findTheater(parts[0]);
+    if (maybeTheater) {
+      theater = maybeTheater;
+      parts = parts.slice(1);
+    }
+  }
+  movieQuery = parts.join(" ");
+
+  if (!theater) {
+    theater = { siteNo: "0013", name: "용산아이파크몰" };
   }
 
   if (!movieQuery) {
@@ -3961,6 +4018,8 @@ function handleCgvRegister(room, msg, sender, replier) {
     movNo: match.movNo,
     movNm: match.movNm,
     dates: [date],
+    siteNo: theater.siteNo,
+    siteNm: theater.name,
   });
 
   if (result.error) {
@@ -3970,6 +4029,7 @@ function handleCgvRegister(room, msg, sender, replier) {
 
   replier.reply(
     "[ 싱봇 CGV ] ✅ 등록 완료!\n" +
+    "극장: " + theater.name + "\n" +
     "영화: " + match.movNm + "\n" +
     "날짜: " + formatCgvDate(date) + "\n" +
     "새 상영 뜨면 자동 알림!"
@@ -4035,7 +4095,8 @@ function handleCgvList(room, msg, sender, replier) {
     for (var j = 0; j < w.dates.length; j++) {
       dates.push(formatCgvDate(w.dates[j]));
     }
-    text += "\n\n🎬 " + w.movNm + "\n📅 " + dates.join(", ");
+    var siteNm = w.siteNm || "용산아이파크몰";
+    text += "\n\n🎬 " + w.movNm + "\n🏢 " + siteNm + "\n📅 " + dates.join(", ");
   }
   text += "\n\n━━━━━━━━━━━━━━━━━━\n5분마다 자동 체크 중 🔄";
   replier.reply(text);
@@ -4091,19 +4152,31 @@ function handleCgvMovieList(room, msg, sender, replier) {
   replier.reply(text);
 }
 
+// ===== CGV 극장 목록 =====
+function handleCgvTheaterList(room, msg, sender, replier) {
+  var text = "[ 싱봇 CGV ] 🏢 서울 CGV 극장\n━━━━━━━━━━━━━━━━━━";
+  for (var i = 0; i < SEOUL_THEATERS.length; i++) {
+    text += "\n" + SEOUL_THEATERS[i].name;
+  }
+  text += "\n\n━━━━━━━━━━━━━━━━━━\nCGV등록 극장명 영화명 날짜\n예) CGV등록 강남 짱구 0425";
+  replier.reply(text);
+}
+
 // ===== 도움말 =====
 function handleCgvHelp(room, msg, sender, replier) {
   replier.reply(
-    "[ 싱봇 CGV ] 🎬 용아맥 상영 알림\n━━━━━━━━━━━━━━━━━━\n\n" +
+    "[ 싱봇 CGV ] 🎬 CGV 상영 알림\n━━━━━━━━━━━━━━━━━━\n\n" +
       "📋 CGV — 최근 12시간 알림 확인\n" +
       "📋 CGV 오늘 — 오늘 알림 확인\n" +
       "📋 CGV 1시간 — 최근 1시간 알림\n\n" +
-      "🎬 CGV등록 영화명 날짜\n" +
+      "🎬 CGV등록 [극장] 영화명 날짜\n" +
       "   예) CGV등록 짱구 20260425\n" +
-      "   예) CGV등록 짱구 0425\n" +
+      "   예) CGV등록 강남 짱구 0425\n" +
+      "   극장 생략 시 용산아이파크몰\n" +
       "❌ CGV삭제 영화명\n" +
       "   예) CGV삭제 짱구\n" +
       "📋 CGV목록 — 감시 목록 확인\n" +
+      "🏢 CGV극장목록 — 서울 CGV 극장\n" +
       "🔍 CGV영화검색 영화명\n" +
       "   예) CGV영화검색 짱구\n" +
       "📜 CGV영화목록 — 전체 상영 영화\n\n" +
@@ -4119,6 +4192,7 @@ var CGV_COMMANDS = [
   { triggers: ["CGV목록", "cgv목록", "ㅊㄱㅂ목록"], handler: handleCgvList },
   { triggers: ["CGV영화검색", "cgv영화검색", "ㅊㄱㅂ영화검색"], handler: handleCgvSearch, hasArgs: true },
   { triggers: ["CGV영화목록", "cgv영화목록", "ㅊㄱㅂ영화목록"], handler: handleCgvMovieList },
+  { triggers: ["CGV극장목록", "cgv극장목록", "ㅊㄱㅂ극장목록"], handler: handleCgvTheaterList },
   { triggers: ["CGV", "cgv", "ㅊㄱㅂ"], handler: handleCgvStatus, hasArgs: true },
 ];
 // ===== 정답/힌트/포기 핸들러 =====

@@ -198,20 +198,23 @@ async function main() {
         return r.json();
       }
 
-      // 스케줄 조회
+      // 스케줄 조회 (극장별)
       const schedules = {};
       for (const watch of config.watchList) {
+        const siteNo = watch.siteNo || config.SITE_NO;
+        const siteNm = watch.siteNm || "용산아이파크몰";
         for (const date of watch.dates) {
-          const key = watch.movNo + "_" + date;
+          const key = siteNo + "_" + watch.movNo + "_" + date;
           const sch = await cgvFetch("/cnm/atkt/searchSchByMov", {
             coCd: config.CO_CD,
-            siteNo: config.SITE_NO,
+            siteNo: siteNo,
             movNo: watch.movNo,
             scnYmd: date,
             rtctlScopCd: "01",
           });
           schedules[key] = {
             movNm: watch.movNm,
+            siteNm: siteNm,
             date: date,
             sessions: (sch.data || []).map((s) => ({
               scnsNm: s.scnsNm,
@@ -296,8 +299,9 @@ async function main() {
             .map((s) => formatTime(s.startTime))
             .join(", ");
           const format = newSessions[0].format || "";
+          const theaterTag = data.siteNm ? ` (${data.siteNm})` : "";
           await notify(
-            `${data.movNm} 새 상영!`,
+            `${data.movNm} 새 상영!${theaterTag}`,
             `${formatDate(data.date)} ${hall}\n${format} ${times}\n잔여석: ${newSessions.map((s) => s.freeSeats + "/" + s.totalSeats).join(", ")}`
           );
         }
@@ -308,8 +312,9 @@ async function main() {
         if (!prevHalls[hall]) {
           const sessions = halls[hall];
           const times = sessions.map((s) => formatTime(s.startTime)).join(", ");
+          const theaterTag2 = data.siteNm ? ` (${data.siteNm})` : "";
           await notify(
-            `${data.movNm} 새 상영관!`,
+            `${data.movNm} 새 상영관!${theaterTag2}`,
             `${formatDate(data.date)} ${hall} 오픈!\n${times}`
           );
         }
