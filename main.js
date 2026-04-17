@@ -4910,7 +4910,7 @@ function handleCatFeed(room, msg, sender, replier) {
   account.lastInteractTime = Date.now();
 
   // 퀘스트 진행
-  generateDailyQuests(account);
+  generateCatDailyQuests(account);
   updateCatQuestProgress(account, "feed", foodName);
 
   var stageUp = checkCatStageUp(account);
@@ -5015,7 +5015,7 @@ function handleCatPlay(room, msg, sender, replier) {
   account.totalInteractions++;
   account.lastInteractTime = Date.now();
 
-  generateDailyQuests(account);
+  generateCatDailyQuests(account);
   updateCatQuestProgress(account, "play");
 
   var reactions = [
@@ -5264,7 +5264,7 @@ function handleCatAdventureResult(room, msg, sender, replier) {
   account.totalInteractions++;
   account.lastInteractTime = Date.now();
 
-  generateDailyQuests(account);
+  generateCatDailyQuests(account);
   updateCatQuestProgress(account, "adventure");
 
   var stageUp = checkCatStageUp(account);
@@ -5862,7 +5862,7 @@ function formatAchievementUnlocks(achievements) {
 
 // === 일일퀘스트 시스템 ===
 
-function generateDailyQuests(account) {
+function generateCatDailyQuests(account) {
   var data = getCatData();
   if (!data.dailyQuestPool) return;
   var today = todayString();
@@ -5901,7 +5901,7 @@ function handleCatQuest(room, msg, sender, replier) {
     return;
   }
 
-  generateDailyQuests(account);
+  generateCatDailyQuests(account);
   saveCatAccount(sender, account);
 
   var quests = account.dailyQuests.quests;
@@ -5931,7 +5931,7 @@ function handleCatQuestClaim(room, msg, sender, replier) {
     return;
   }
 
-  generateDailyQuests(account);
+  generateCatDailyQuests(account);
 
   var quests = account.dailyQuests.quests;
   var claimed = 0;
