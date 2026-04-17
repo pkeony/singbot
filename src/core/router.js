@@ -151,6 +151,15 @@ var CONTEXT_COMMANDS = [
 function _response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
   var trimmed = msg.trim();
 
+  // 폰 키보드 호환: 명령어 맨 앞의 복합자음 분해형을 결합형으로 정규화 (예: ㄱㅅㅋ → ㄳㅋ)
+  var _choPairs = [["ㄱㅅ","ㄳ"],["ㄴㅈ","ㄵ"],["ㄴㅎ","ㄶ"],["ㄹㄱ","ㄺ"],["ㄹㅁ","ㄻ"],["ㄹㅂ","ㄼ"],["ㄹㅅ","ㄽ"],["ㄹㅌ","ㄾ"],["ㄹㅍ","ㄿ"],["ㄹㅎ","ㅀ"],["ㅂㅅ","ㅄ"]];
+  for (var _ci = 0; _ci < _choPairs.length; _ci++) {
+    if (trimmed.indexOf(_choPairs[_ci][0]) === 0) {
+      trimmed = _choPairs[_ci][1] + trimmed.substring(2);
+      break;
+    }
+  }
+
   // 0. CGV 자동 알림 체크 (2분마다 최대 1회)
   if (typeof checkCgvAutoAlert === "function") {
     var _now = Date.now();
