@@ -331,6 +331,7 @@ async function main() {
         console.log(
           `[초기] ${data.movNm} (${formatDate(data.date)})\n${hallSummary}`
         );
+        prevState[key] = halls; // 버그 수정: 첫 실행에도 현재 상태 저장해야 다음 run에서 비교 가능
         continue;
       }
 
