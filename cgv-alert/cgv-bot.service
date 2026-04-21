@@ -1,0 +1,25 @@
+[Unit]
+Description=CGV discord bot (slash command handler)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kelvinpark_dev
+WorkingDirectory=/home/kelvinpark_dev/cgv-alert
+
+# 토큰은 배포 시 실제 값으로 교체 (sed 로 주입 권장)
+Environment="DISCORD_BOT_TOKEN=REPLACE_TOKEN"
+Environment="DISCORD_APP_ID=1496106680646111403"
+Environment="DISCORD_GUILD_ID=1496103375043952690"
+
+ExecStart=/usr/bin/node discord_bot.js
+
+Restart=always
+RestartSec=10
+
+StandardOutput=append:/home/kelvinpark_dev/cgv-alert/bot.log
+StandardError=append:/home/kelvinpark_dev/cgv-alert/bot.log
+
+[Install]
+WantedBy=multi-user.target
