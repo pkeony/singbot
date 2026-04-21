@@ -100,9 +100,12 @@ async function notify(title, message) {
 }
 
 // ===== 스케줄을 상영관별로 그룹화 =====
+// stcnt(총 좌석)가 0/없음인 세션은 "예매 준비중" 상태 — 알림 의미 없으니 제외.
+// 예매가 열려서 좌석 수가 확정될 때(예: 450/450) 비로소 "새 세션"으로 감지됨.
 function groupByHall(scheduleData) {
   const halls = {};
   for (const s of scheduleData) {
+    if (!s.stcnt || s.stcnt <= 0) continue;
     const hall = s.scnsNm;
     if (!halls[hall]) halls[hall] = [];
     halls[hall].push({
