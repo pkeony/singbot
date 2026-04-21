@@ -1398,11 +1398,13 @@ function handleMineSell(room, msg, sender, replier) {
     return;
   }
 
-  // "자원명 수량" 또는 "자원명 전부"
+  // "자원명 수량" 또는 "자원명 전부/다/all" 또는 수량 생략("자원명") → 전부
   var parts = input.split(/\s+/);
   var resourceName = parts[0];
-  var sellAll = parts.length > 1 && parts[parts.length - 1] === "전부";
-  var count = sellAll ? 0 : (parts.length > 1 ? parseInt(parts[parts.length - 1]) : 0);
+  var lastPart = parts[parts.length - 1];
+  var sellAll = parts.length === 1
+    || lastPart === "전부" || lastPart === "다" || lastPart.toLowerCase() === "all";
+  var count = sellAll ? 0 : parseInt(lastPart);
 
   var id = MineData.resourceIdMap[resourceName];
   if (!id) {
@@ -1461,9 +1463,10 @@ function handleMineHelp(room, msg, sender, replier) {
     "경제:\n" +
     "  ㄳㅅㅈ — 상점\n" +
     "  ㄳㅅ [아이템] — 상점 구매\n" +
-    "  ㄳㅍ [자원] [수량] — 상점 판매\n" +
+    "  ㄳㅍ [자원] [수량|전부] — 상점 판매\n" +
     "  ㄳㅅㅅ — 시세 (매일 변동)\n" +
-    "  ㅅㅈㅍ [자원] [수량] — 시장 판매\n\n" +
+    "  ㅅㅈㅍ [자원] [수량|전부] — 시장 판매\n" +
+    "  (수량 생략 또는 '전부/다' → 전량 판매)\n\n" +
     "거래:\n" +
     "  ㄱㅅ거래신청 [상대] — 거래 요청\n" +
     "  ㄱㅅ거래수락/거절 — 응답\n" +
@@ -1983,8 +1986,10 @@ function handleMineMarketSell(room, msg, sender, replier) {
     return;
   }
 
-  var sellAll = parts.length > 1 && parts[1] === "전부";
-  var count = sellAll ? has : (parts.length > 1 ? parseInt(parts[1]) : 0);
+  var qtyPart = parts.length > 1 ? parts[1] : "";
+  var sellAll = parts.length === 1
+    || qtyPart === "전부" || qtyPart === "다" || qtyPart.toLowerCase() === "all";
+  var count = sellAll ? has : parseInt(qtyPart);
   if (isNaN(count) || count <= 0) {
     replier.reply("[ 싱봇 광산 ] 수량을 입력하세요.");
     return;
