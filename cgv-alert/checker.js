@@ -410,14 +410,10 @@ async function runOnce() {
     clearErrorState(); // 성공 시 에러 억제 상태 초기화 → 다음 실패는 즉시 알림
     console.log("[완료]\n");
   } catch (err) {
+    // flaky 에러(타임아웃 등)가 잦아 알림 스팸됨 → 로그에만 남기고 ntfy/discord 발송하지 않음.
+    // systemd status + service.log 로 확인 가능. 필요 시 notify() 호출 부활 가능.
     const errMsg = err.message || String(err);
     console.error("[에러]", errMsg);
-    if (shouldSuppressError(errMsg)) {
-      console.log("[SUPPRESSED] 같은 에러 30분 이내 반복 — 알림 생략");
-    } else {
-      await notify("CGV 체커 에러", errMsg);
-      recordError(errMsg);
-    }
   } finally {
     if (browser) await browser.close();
   }
