@@ -262,14 +262,12 @@ async function main() {
             movNm: watch.movNm,
             siteNm: siteNm,
             date: date,
-            sessions: (sch.data || []).map((s) => ({
-              scnsNm: s.scnsNm,
-              scnsrtTm: s.scnsrtTm,
-              scnendTm: s.scnendTm,
-              movkndDsplNm: s.movkndDsplNm,
-              stcnt: s.stcnt,
-              frSeatCnt: s.frSeatCnt,
-            })),
+            // 임시 디버그: 원시 필드 전부 반환 (예매 준비중 판별 필드 찾는 용도)
+            sessions: (sch.data || []).map((s) => {
+              const o = {};
+              for (const k in s) o[k] = s[k];
+              return o;
+            }),
           };
         }
       }
@@ -329,6 +327,10 @@ async function main() {
         console.log(
           `[초기] ${data.movNm} (${formatDate(data.date)})\n${hallSummary}`
         );
+        // 임시 디버그: 각 세션 원시 필드 전체 출력 → '예매 준비중' 판별 필드 확인
+        for (const s of data.sessions) {
+          console.log("[RAW " + formatDate(data.date) + " " + (s.scnsNm || "?") + " " + (s.scnsrtTm || "?") + "]", JSON.stringify(s));
+        }
         continue;
       }
 
