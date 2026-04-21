@@ -170,18 +170,41 @@ function _response(room, msg, sender, isGroupChat, replier, imageDB, packageName
   }
 
   // 1. 퀴즈 진행 중이면 컨텍스트 명령 먼저
+  // 메신저봇R이 같은 카톡방이라도 sender별로 room 문자열을 다르게 전달하는 경우 대응:
+  // 현재 room에 활성 퀴즈가 없으면 roomState 전체에서 가장 최근 시작된 활성 퀴즈를 찾음
+  var _activeRoom = null;
   if (roomState[room] && roomState[room].activeQuiz) {
-    for (var i = 0; i < CONTEXT_COMMANDS.length; i++) {
-      var cmd = CONTEXT_COMMANDS[i];
-      if (cmd.prefix && trimmed.indexOf(cmd.prefix) === 0) {
-        cmd.handler(room, trimmed, sender, replier);
-        return;
+    _activeRoom = room;
+  } else {
+    var _latestStart = 0;
+    for (var _rKey in roomState) {
+      if (roomState.hasOwnProperty(_rKey) && roomState[_rKey].activeQuiz) {
+        var _st = roomState[_rKey].activeQuiz.startTime || 0;
+        if (_st > _latestStart) {
+          _latestStart = _st;
+          _activeRoom = _rKey;
+        }
       }
-      if (cmd.triggers) {
-        for (var j = 0; j < cmd.triggers.length; j++) {
-          if (trimmed === cmd.triggers[j]) {
-            cmd.handler(room, trimmed, sender, replier);
-            return;
+    }
+  }
+
+  if (_activeRoom) {
+    var _lines = trimmed.split("\n");
+    for (var _li = 0; _li < _lines.length; _li++) {
+      var _line = _lines[_li].trim();
+      if (!_line) continue;
+      for (var i = 0; i < CONTEXT_COMMANDS.length; i++) {
+        var cmd = CONTEXT_COMMANDS[i];
+        if (cmd.prefix && _line.indexOf(cmd.prefix) === 0) {
+          cmd.handler(_activeRoom, _line, sender, replier);
+          return;
+        }
+        if (cmd.triggers) {
+          for (var j = 0; j < cmd.triggers.length; j++) {
+            if (_line === cmd.triggers[j]) {
+              cmd.handler(_activeRoom, _line, sender, replier);
+              return;
+            }
           }
         }
       }

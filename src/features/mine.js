@@ -624,16 +624,9 @@ function handleGamble(room, msg, sender, replier) {
     return;
   }
 
-  var now = Date.now();
-  if (now - account.gamblingStats.lastGambleTime < MineData.gambling.cooldownMs) {
-    var wait = Math.ceil((MineData.gambling.cooldownMs - (now - account.gamblingStats.lastGambleTime)) / 1000);
-    replier.reply("[ 싱봇 광산 ] " + wait + "초 후에 다시 도박할 수 있습니다.");
-    return;
-  }
-
   account.gold -= amount;
   account.gamblingStats.totalBet += amount;
-  account.gamblingStats.lastGambleTime = now;
+  account.gamblingStats.lastGambleTime = Date.now();
   var text = "";
 
   if (choice === "홀" || choice === "짝") {
