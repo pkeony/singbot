@@ -79,8 +79,8 @@ function saveState(state) {
   fs.writeFileSync(CONFIG.STATE_FILE, JSON.stringify(state, null, 2));
 }
 
-// ===== ntfy 알림 (JSON API) =====
-async function notify(title, message) {
+// ===== ntfy 알림 =====
+async function notifyNtfy(title, message) {
   try {
     await fetch("https://ntfy.sh", {
       method: "POST",
@@ -93,10 +93,36 @@ async function notify(title, message) {
         tags: ["movie_camera"],
       }),
     });
-    console.log(`[알림] ${title} — ${message}`);
+    console.log(`[ntfy] ${title}`);
   } catch (err) {
-    console.error("[알림 실패]", err.message);
+    console.error("[ntfy 실패]", err.message);
   }
+}
+
+// ===== 디스코드 웹훅 알림 =====
+async function notifyDiscord(title, message) {
+  const url = process.env.DISCORD_WEBHOOK_URL;
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: `**🎬 ${title}**\n${message}`,
+      }),
+    });
+    console.log(`[discord] ${title}`);
+  } catch (err) {
+    console.error("[discord 실패]", err.message);
+  }
+}
+
+// ===== 통합 알림 dispatch — ntfy + discord 병렬 =====
+async function notify(title, message) {
+  await Promise.allSettled([
+    notifyNtfy(title, message),
+    notifyDiscord(title, message),
+  ]);
 }
 
 // ===== 스케줄을 상영관별로 그룹화 =====
@@ -131,8 +157,8 @@ function formatDate(d) {
   return d.substring(0, 4) + "-" + d.substring(4, 6) + "-" + d.substring(6, 8);
 }
 
-// ===== 메인 =====
-async function main() {
+// ===== 메인 (1회 실행) =====
+async function runOnce() {
   const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
   console.log(`[${now}] CGV 용아맥 체크 시작 (stealth=${usingStealth ? "ON" : "OFF"})`);
 
@@ -393,6 +419,23 @@ async function main() {
     }
   } finally {
     if (browser) await browser.close();
+  }
+}
+
+// ===== 무한 루프 (systemd service로 돌릴 때 사용) =====
+const LOOP_SLEEP_MS = 30 * 1000;
+
+async function main() {
+  console.log(
+    `[CGV checker] 무한 루프 모드 시작 (회차간 ${LOOP_SLEEP_MS / 1000}초 대기)`
+  );
+  while (true) {
+    try {
+      await runOnce();
+    } catch (err) {
+      console.error("[루프 외부 에러]", err.message || err);
+    }
+    await new Promise((r) => setTimeout(r, LOOP_SLEEP_MS));
   }
 }
 
