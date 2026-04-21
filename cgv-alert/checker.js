@@ -100,12 +100,13 @@ async function notify(title, message) {
 }
 
 // ===== 스케줄을 상영관별로 그룹화 =====
-// stcnt(총 좌석)가 0/없음인 세션은 "예매 준비중" 상태 — 알림 의미 없으니 제외.
-// 예매가 열려서 좌석 수가 확정될 때(예: 450/450) 비로소 "새 세션"으로 감지됨.
+// cntlYn === "Y" = 예매 통제중(준비중). 시간·좌석수는 보이지만 실제 예매 불가 →
+// 알림 의미 없으므로 제외. cntlYn === "N" 으로 바뀌는 순간 "새 세션"으로 감지됨.
 function groupByHall(scheduleData) {
   const halls = {};
   for (const s of scheduleData) {
-    if (!s.stcnt || s.stcnt <= 0) continue;
+    if (s.cntlYn === "Y") continue;
+    if (!Number(s.stcnt)) continue;
     const hall = s.scnsNm;
     if (!halls[hall]) halls[hall] = [];
     halls[hall].push({
@@ -262,12 +263,15 @@ async function main() {
             movNm: watch.movNm,
             siteNm: siteNm,
             date: date,
-            // 임시 디버그: 원시 필드 전부 반환 (예매 준비중 판별 필드 찾는 용도)
-            sessions: (sch.data || []).map((s) => {
-              const o = {};
-              for (const k in s) o[k] = s[k];
-              return o;
-            }),
+            sessions: (sch.data || []).map((s) => ({
+              scnsNm: s.scnsNm,
+              scnsrtTm: s.scnsrtTm,
+              scnendTm: s.scnendTm,
+              movkndDsplNm: s.movkndDsplNm,
+              stcnt: s.stcnt,
+              frSeatCnt: s.frSeatCnt,
+              cntlYn: s.cntlYn,
+            })),
           };
         }
       }
@@ -327,10 +331,6 @@ async function main() {
         console.log(
           `[초기] ${data.movNm} (${formatDate(data.date)})\n${hallSummary}`
         );
-        // 임시 디버그: 각 세션 원시 필드 전체 출력 → '예매 준비중' 판별 필드 확인
-        for (const s of data.sessions) {
-          console.log("[RAW " + formatDate(data.date) + " " + (s.scnsNm || "?") + " " + (s.scnsrtTm || "?") + "]", JSON.stringify(s));
-        }
         continue;
       }
 
