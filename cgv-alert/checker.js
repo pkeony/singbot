@@ -423,7 +423,7 @@ async function runOnce() {
 }
 
 // ===== 무한 루프 (systemd service로 돌릴 때 사용) =====
-const LOOP_SLEEP_MS = 30 * 1000;
+const LOOP_SLEEP_MS = 15 * 1000;
 
 async function main() {
   console.log(
