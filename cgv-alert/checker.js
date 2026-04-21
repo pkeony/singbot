@@ -23,7 +23,7 @@ const CONFIG = {
   CGV_SECRET: "ydqXY0ocnFLmJGHr_zNzFcpjwAsXq_8JcBNURAkRscg",
   SITE_NO: "0013", // 용산아이파크몰
   CO_CD: "A420",
-  NTFY_TOPIC: process.env.NTFY_TOPIC || "kelvin-cgv-imax",
+  NTFY_TOPIC: process.env.NTFY_TOPIC || "kelvin-cgv-imax-v2",
   STATE_FILE: path.join(__dirname, "last_state.json"),
   WATCHLIST_FILE: path.join(__dirname, "watch_list.json"),
   MOVIELIST_FILE: path.join(__dirname, "movie_list.json"),

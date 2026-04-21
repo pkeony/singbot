@@ -3730,7 +3730,7 @@ for (var _mineCmdIdx = 0; _mineCmdIdx < MINE_COMMANDS.length; _mineCmdIdx++) {
 }
 // ===== CGV 용아맥 상영 알림 연동 =====
 
-var CGV_NTFY_TOPIC = "kelvin-cgv-imax";
+var CGV_NTFY_TOPIC = "kelvin-cgv-imax-v2";
 var CGV_NTFY_API = "https://ntfy.sh/" + CGV_NTFY_TOPIC + "/json";
 var _cgvLastCheckTime = Math.floor(Date.now() / 1000);
 var _cgvNotifiedIds = {};
