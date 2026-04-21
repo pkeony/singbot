@@ -1,10 +1,19 @@
 // CGV 용산아이파크몰 — 영화+날짜 상영 스케줄 알림 봇
 // watch_list.json 기반 동적 감시, movie_list.json 자동 갱신
+// puppeteer-extra + stealth 플러그인으로 Cloudflare 봇 탐지 우회 시도.
+// 플러그인 미설치 시 기존 puppeteer로 폴백(동작은 하지만 차단될 가능성 높음).
 let puppeteer;
+let usingStealth = false;
 try {
-  puppeteer = require("puppeteer-core");
-} catch {
-  puppeteer = require("puppeteer");
+  const { addExtra } = require("puppeteer-extra");
+  const stealth = require("puppeteer-extra-plugin-stealth");
+  let base;
+  try { base = require("puppeteer-core"); } catch { base = require("puppeteer"); }
+  puppeteer = addExtra(base);
+  puppeteer.use(stealth());
+  usingStealth = true;
+} catch (e) {
+  try { puppeteer = require("puppeteer-core"); } catch { puppeteer = require("puppeteer"); }
 }
 const fs = require("fs");
 const path = require("path");
@@ -18,9 +27,35 @@ const CONFIG = {
   STATE_FILE: path.join(__dirname, "last_state.json"),
   WATCHLIST_FILE: path.join(__dirname, "watch_list.json"),
   MOVIELIST_FILE: path.join(__dirname, "movie_list.json"),
+  ERROR_STATE_FILE: path.join(__dirname, "last_error.json"),
 };
 
 const TIMEOUT = 180000;
+const ERROR_SUPPRESS_MS = 30 * 60 * 1000; // 같은 에러 30분 이내 반복 시 알림 생략
+
+// ===== 에러 억제 (동일 에러 반복 시 카톡 스팸 방지) =====
+function shouldSuppressError(errMsg) {
+  try {
+    const s = JSON.parse(fs.readFileSync(CONFIG.ERROR_STATE_FILE, "utf8"));
+    if (s.msg === errMsg && Date.now() - s.time < ERROR_SUPPRESS_MS) return true;
+  } catch {}
+  return false;
+}
+
+function recordError(errMsg) {
+  try {
+    fs.writeFileSync(
+      CONFIG.ERROR_STATE_FILE,
+      JSON.stringify({ msg: errMsg, time: Date.now() })
+    );
+  } catch {}
+}
+
+function clearErrorState() {
+  try {
+    if (fs.existsSync(CONFIG.ERROR_STATE_FILE)) fs.unlinkSync(CONFIG.ERROR_STATE_FILE);
+  } catch {}
+}
 
 // ===== 감시 목록 로드 =====
 function loadWatchList() {
@@ -95,7 +130,7 @@ function formatDate(d) {
 // ===== 메인 =====
 async function main() {
   const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
-  console.log(`[${now}] CGV 용아맥 체크 시작`);
+  console.log(`[${now}] CGV 용아맥 체크 시작 (stealth=${usingStealth ? "ON" : "OFF"})`);
 
   const watchList = loadWatchList();
   if (watchList.length === 0) {
@@ -195,6 +230,14 @@ async function main() {
           },
           credentials: "include",
         });
+        if (!r.ok) {
+          const bodyText = await r.text().catch(() => "");
+          throw new Error(
+            "HTTP " + r.status + " " + pathname +
+            " | server=" + (r.headers.get("server") || "?") +
+            " | body=" + bodyText.substring(0, 120).replace(/\s+/g, " ")
+          );
+        }
         return r.json();
       }
 
@@ -331,10 +374,17 @@ async function main() {
 
     // 4. 상태 저장
     saveState(prevState);
+    clearErrorState(); // 성공 시 에러 억제 상태 초기화 → 다음 실패는 즉시 알림
     console.log("[완료]\n");
   } catch (err) {
-    console.error("[에러]", err.message);
-    await notify("CGV 체커 에러", err.message);
+    const errMsg = err.message || String(err);
+    console.error("[에러]", errMsg);
+    if (shouldSuppressError(errMsg)) {
+      console.log("[SUPPRESSED] 같은 에러 30분 이내 반복 — 알림 생략");
+    } else {
+      await notify("CGV 체커 에러", errMsg);
+      recordError(errMsg);
+    }
   } finally {
     if (browser) await browser.close();
   }
