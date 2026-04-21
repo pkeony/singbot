@@ -172,6 +172,7 @@ async function runOnce() {
     const launchOptions = {
       headless: "new",
       protocolTimeout: TIMEOUT,
+      timeout: 60000, // Chrome 프로세스 기동 대기 60초 (기본 30초) — swap 쓰는 소형 VM 대응
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
